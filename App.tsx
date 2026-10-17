@@ -1,25 +1,23 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { Dimensions, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AppNavigation } from "./src/navigation";
+import { StoreProvider } from "./src/store";
+import { colors } from "./src/theme";
 
 export default function App() {
+  const frameWidth = Math.min(Dimensions.get("window").width, 430);
   return (
-    <View style={styles.container}>
-      <Text style={styles.word}>habit.</Text>
-      <StatusBar style="light" />
-    </View>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#050807", alignItems: "center" }}>
+      <SafeAreaProvider style={{ flex: 1, width: frameWidth, backgroundColor: colors.bg }}>
+        <View style={{ flex: 1, width: frameWidth, backgroundColor: colors.bg }}>
+          <StoreProvider>
+            <StatusBar style="light" />
+            <AppNavigation />
+          </StoreProvider>
+        </View>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#090E10",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  word: {
-    color: "#F3F7F8",
-    fontSize: 32,
-    fontWeight: "700",
-  },
-});
