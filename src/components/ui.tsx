@@ -5,6 +5,8 @@ import { categoryMeta, icons } from "./Icons";
 import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
+import { XP_PER_LEVEL } from "../sample";
+import { useStore } from "../store";
 
 export function Screen({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -30,14 +32,17 @@ export function TopBar({
   onAvatar: () => void;
   onSettings: () => void;
 }) {
+  const { currentUser, totalXp } = useStore();
+  const initials = currentUser?.initials ?? "··";
+  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
   return (
     <View style={styles.topBar}>
       <Pressable onPress={onAvatar} style={styles.avatarWrap}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>MK</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>12</Text>
+          <Text style={styles.badgeText}>{level}</Text>
         </View>
       </Pressable>
       {progress == null ? <View style={{ flex: 1 }} /> : (
@@ -85,7 +90,7 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
       {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
       {item.money ? (
         <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
-          <Text style={styles.euroText}>€</Text>
+          <Text style={styles.euroText}>Ft</Text>
         </View>
       ) : null}
       {deadline ? (
@@ -200,8 +205,8 @@ const styles = StyleSheet.create({
   tile: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   rowTitle: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "600" },
   xp: { color: colors.accent, fontSize: 11, fontWeight: "700" },
-  euro: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.euro, alignItems: "center", justifyContent: "center" },
-  euroText: { color: colors.muted, fontSize: 9, fontWeight: "600" },
+  euro: { width: 22, height: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.euro, alignItems: "center", justifyContent: "center" },
+  euroText: { color: colors.muted, fontSize: 8, fontWeight: "700" },
   check: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colors.euro },
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent, alignItems: "center", justifyContent: "center" },
   chip: { borderRadius: 99, paddingHorizontal: 9, paddingVertical: 5 },

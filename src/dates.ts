@@ -1,4 +1,11 @@
-export const TODAY = "2026-10-16";
+export function isoDate(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export const TODAY = (() => {
+  const now = new Date();
+  return isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+})();
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -17,10 +24,6 @@ export function shortDate(iso: string) {
 export function longDate(iso: string) {
   const { weekday, month, day, year } = parts(iso);
   return `${weekday}, ${MONTHS[month - 1]} ${day}, ${year}`;
-}
-
-export function isoDate(year: number, month: number, day: number) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function daysFromToday(iso: string) {
@@ -49,5 +52,6 @@ export function monthGrid(year: number, month: number) {
 }
 
 export function moneyLabel(amount: number) {
-  return `−€${amount.toFixed(2)}`;
+  const formatted = new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 0 }).format(amount);
+  return `−${formatted} Ft`;
 }

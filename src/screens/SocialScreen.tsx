@@ -29,6 +29,7 @@ export function SocialScreen() {
         ) : null}
         <View style={{ gap: 8 }}>
           <SectionLabel title="FRIENDS" />
+          {friends.length === 0 ? <Text style={styles.meta}>No other users yet.</Text> : null}
           {friends.map((person) => (
             <PersonRow
               key={person.id}

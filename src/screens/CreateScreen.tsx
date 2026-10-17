@@ -3,11 +3,11 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { categoryMeta, icons } from "../components/Icons";
-import { PageHeader, PrimaryButton, Screen } from "../components/ui";
-import { TODAY, longDate } from "../dates";
+import { IconButton, PageHeader, PrimaryButton, Screen } from "../components/ui";
+import { TODAY, isoDate, longDate, monthGrid, parts } from "../dates";
 import { colors, radius } from "../theme";
 import { useStore } from "../store";
-import type { Category, ItemKind } from "../types";
+import { Category, type ItemKind } from "../types";
 import type { RootStackParamList } from "../routes";
 
 const kinds: Array<{ kind: ItemKind; label: string; hint: string; Icon: typeof icons.Repeat2 }> = [
@@ -16,7 +16,7 @@ const kinds: Array<{ kind: ItemKind; label: string; hint: string; Icon: typeof i
   { kind: "deadline", label: "Deadline", hint: "A date", Icon: icons.CalendarClock },
 ];
 
-const categories: Category[] = ["study", "fitness", "hygiene", "work", "personal", "other"];
+const categories = Object.values(Category);
 
 export function CreateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -25,31 +25,38 @@ export function CreateScreen() {
   const [kind, setKind] = useState<ItemKind>(route.params?.kind ?? "habit");
   const [title, setTitle] = useState(route.params?.kind ? "" : "Drink water");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category>("hygiene");
+  const [category, setCategory] = useState(Category.Hygiene);
   const [date, setDate] = useState(route.params?.date ?? TODAY);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const opened = parts(route.params?.date ?? TODAY);
+  const [cursor, setCursor] = useState({ year: opened.year, month: opened.month });
   const [titleError, setTitleError] = useState(false);
   const [dateError, setDateError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     const missingTitle = title.trim().length === 0;
     const missingDate = kind === "deadline" && !date;
     setTitleError(missingTitle);
     setDateError(missingDate);
     if (missingTitle || missingDate || saving) return;
     setSaving(true);
-    setTimeout(() => {
-      addItem({
+    try {
+      await addItem({
         title: title.trim(),
         kind,
         category,
         xp: kind === "deadline" ? 0 : kind === "habit" ? 10 : 20,
         money: kind !== "deadline",
         date,
+        description: description.trim(),
       });
       showToast(kind === "deadline" ? "Deadline saved" : "Saved");
       navigation.goBack();
-    }, 700);
+    } catch (error) {
+      setSaving(false);
+      showToast(error instanceof Error ? error.message : "Could not save", "error", "alert");
+    }
   };
 
   const dateLabel = kind === "habit" ? "Starts" : "Due date";
@@ -107,10 +114,35 @@ export function CreateScreen() {
             </View>
           </Field>
           <Field label={dateLabel} error={dateError ? "Choose a due date." : undefined}>
-            <View style={[styles.input, styles.dateInput, dateError && styles.inputError]}>
+            <Pressable
+              onPress={() => {
+                const current = parts(date);
+                setCursor({ year: current.year, month: current.month });
+                setPickerOpen((open) => !open);
+                setDateError(false);
+              }}
+              style={[styles.input, styles.dateInput, dateError && styles.inputError, pickerOpen && styles.dateOpen]}
+            >
               <Text style={{ flex: 1, color: date ? colors.text : colors.placeholder, fontSize: 14 }}>{date ? longDate(date) : ""}</Text>
-              <icons.CalendarDays size={17} color={colors.secondary} />
-            </View>
+              <icons.CalendarDays size={17} color={pickerOpen ? colors.accent : colors.secondary} />
+            </Pressable>
+            {pickerOpen ? (
+              <DatePicker
+                cursor={cursor}
+                selected={date}
+                onShift={(delta) =>
+                  setCursor((current) => {
+                    const next = new Date(Date.UTC(current.year, current.month - 1 + delta, 1));
+                    return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1 };
+                  })
+                }
+                onSelect={(iso) => {
+                  setDate(iso);
+                  setPickerOpen(false);
+                  setDateError(false);
+                }}
+              />
+            ) : null}
           </Field>
           {kind === "habit" ? (
             <Text style={styles.help}>A new occurrence appears each day. You can complete it once per day.</Text>
@@ -119,6 +151,53 @@ export function CreateScreen() {
         <PrimaryButton label={saving ? "Saving" : kind === "habit" ? "Create habit" : kind === "goal" ? "Create task" : "Create deadline"} onPress={submit} disabled={saving} />
       </ScrollView>
     </Screen>
+  );
+}
+
+const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
+
+function DatePicker({
+  cursor,
+  selected,
+  onShift,
+  onSelect,
+}: {
+  cursor: { year: number; month: number };
+  selected: string;
+  onShift: (delta: number) => void;
+  onSelect: (iso: string) => void;
+}) {
+  const cells = monthGrid(cursor.year, cursor.month);
+  const monthName = new Date(Date.UTC(cursor.year, cursor.month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  return (
+    <View style={styles.picker}>
+      <View style={styles.month}>
+        <IconButton onPress={() => onShift(-1)}>
+          <icons.ChevronLeft size={18} color={colors.text} />
+        </IconButton>
+        <Text style={styles.monthTitle}>{monthName}</Text>
+        <IconButton onPress={() => onShift(1)}>
+          <icons.ChevronRight size={18} color={colors.text} />
+        </IconButton>
+      </View>
+      <View style={styles.week}>
+        {WEEK.map((label, index) => (
+          <Text key={`${label}-${index}`} style={styles.weekText}>{label}</Text>
+        ))}
+      </View>
+      <View style={styles.grid}>
+        {cells.map((day, index) => {
+          if (!day) return <View key={`empty-${index}`} style={styles.cell} />;
+          const iso = isoDate(cursor.year, cursor.month, day);
+          const isSelected = iso === selected;
+          return (
+            <Pressable key={iso} onPress={() => onSelect(iso)} style={[styles.cell, isSelected && styles.cellSelected, iso === TODAY && !isSelected && styles.cellToday]}>
+              <Text style={[styles.cellText, isSelected && { color: colors.onAccent }]}>{day}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -143,6 +222,17 @@ const styles = StyleSheet.create({
   input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14 },
   inputError: { borderColor: colors.streak },
   dateInput: { flexDirection: "row", alignItems: "center" },
+  dateOpen: { borderColor: colors.accent },
+  picker: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, padding: 10, gap: 8 },
+  month: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  monthTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  week: { flexDirection: "row" },
+  weekText: { flex: 1, textAlign: "center", color: colors.placeholder, fontSize: 10, fontWeight: "700" },
+  grid: { flexDirection: "row", flexWrap: "wrap", rowGap: 4 },
+  cell: { width: `${100 / 7}%`, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 10 },
+  cellToday: { borderWidth: 1.5, borderColor: colors.accent },
+  cellSelected: { backgroundColor: colors.accent },
+  cellText: { color: colors.text, fontSize: 12, fontWeight: "600" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { height: 36, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 6 },
   chipOn: { borderColor: colors.accent, backgroundColor: "rgba(182,255,112,0.08)" },

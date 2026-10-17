@@ -12,6 +12,7 @@ import { DayScreen } from "./screens/DayScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { PlanScreen } from "./screens/PlanScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
+import { AuthScreen } from "./screens/AuthScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SocialScreen } from "./screens/SocialScreen";
 import { TodayScreen } from "./screens/TodayScreen";
@@ -92,12 +93,22 @@ function MainTabs() {
 }
 
 export function AppNavigation() {
-  const { toast, dismissToast } = useStore();
+  const { toast, dismissToast, signedIn, authReady } = useStore();
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(dismissToast, 2400);
     return () => clearTimeout(timer);
   }, [toast, dismissToast]);
+
+  if (!authReady) return null;
+  if (!signedIn) {
+    return (
+      <>
+        <AuthScreen />
+        {toast ? <Toast toast={toast} /> : null}
+      </>
+    );
+  }
 
   return (
     <NavigationContainer theme={navTheme}>

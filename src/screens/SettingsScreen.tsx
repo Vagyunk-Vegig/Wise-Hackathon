@@ -18,7 +18,7 @@ const rows = [
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { showToast } = useStore();
+  const { showToast, signOut, currentUser } = useStore();
 
   return (
     <Screen>
@@ -30,7 +30,11 @@ export function SettingsScreen() {
               key={row.key}
               onPress={() => {
                 if (row.key === "commitment") navigation.navigate("Commitment");
-                else if (row.key === "logout") showToast("You're signed in on this device.", "error", "alert");
+                else if (row.key === "logout") {
+                  void signOut().catch((error: unknown) => {
+                    showToast(error instanceof Error ? error.message : "Could not sign out", "error", "alert");
+                  });
+                } else if (row.key === "account") showToast(currentUser ? `Signed in as ${currentUser.username}` : "Not signed in");
                 else showToast(`${row.label} stays on this device.`);
               }}
               style={[styles.row, index < rows.length - 1 && styles.divider]}

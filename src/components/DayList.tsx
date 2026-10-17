@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
-import { PENALTY_EUR } from "../sample";
+import { PENALTY_FT } from "../sample";
 import { moneyLabel, shortDate, TODAY } from "../dates";
 import { colors } from "../theme";
 import type { Item } from "../types";
 import { ItemRow, QuietRow, SectionLabel } from "./ui";
 
 export function atRisk(items: Item[]) {
-  return items.filter((item) => item.money && !item.done).length * PENALTY_EUR;
+  return items.filter((item) => item.money && !item.done).length * PENALTY_FT;
 }
 
 export function DayList({

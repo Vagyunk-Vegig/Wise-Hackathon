@@ -1,9 +1,11 @@
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
 import { IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
+import { XP_PER_LEVEL } from "../sample";
+import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
 const heat = [colors.heat4, colors.heat3, colors.heat2, colors.heat1];
@@ -15,16 +17,15 @@ const rows = [
   [0, 1, 2, 3, 0, 1, 2, 3, 0, 3, 3, 3],
 ];
 
-const badges = [
-  { label: "7 Day Streak", color: colors.accent, Icon: icons.Star },
-  { label: "Level 10", color: colors.accent, Icon: icons.Leaf },
-  { label: "50 Tasks", color: colors.streak, Icon: icons.CircleCheck },
-  { label: "Early Bird", color: colors.study, Icon: icons.Sunrise },
-  { label: "Longest streak", color: colors.achievement, Icon: icons.Flame },
-];
-
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { currentUser, totalXp, streak, items } = useStore();
+  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+  const into = totalXp % XP_PER_LEVEL;
+  const completed = currentUser ? items.filter((item) => item.done).length : 0;
+  const name = currentUser?.username ?? "No profile";
+  const badgeList = (currentUser?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
+  const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.body}>
@@ -38,32 +39,34 @@ export function ProfileScreen() {
           }
         />
         <View style={styles.identity}>
-          <Image source={require("../../assets/alex.png")} style={styles.portrait} />
-          <Text style={styles.name}>Alex</Text>
-          <Text style={styles.age}>21 years old</Text>
+          <View style={[styles.portrait, { backgroundColor: currentUser ? colors.accent : colors.surface }]}>
+            <Text style={[styles.initials, currentUser ? null : { color: colors.text }]}>{currentUser?.initials ?? "··"}</Text>
+          </View>
+          <Text style={styles.name}>{name}</Text>
+          {currentUser ? null : <Text style={styles.age}>Sign in to save a profile.</Text>}
         </View>
         <View style={{ gap: 10, alignItems: "center" }}>
-          <Text style={styles.level}>Level 12</Text>
+          <Text style={styles.level}>Level {level}</Text>
           <View style={styles.pill}>
-            <View style={styles.pillFill}>
-              <Text style={styles.pillText}>1250/1800</Text>
+            <View style={[styles.pillFill, { width: `${Math.max(22, Math.round((into / XP_PER_LEVEL) * 100))}%` }]}>
+              <Text style={styles.pillText}>{into}/{XP_PER_LEVEL}</Text>
             </View>
           </View>
           <View style={styles.stats}>
             <View style={styles.stat}>
               <icons.Flame size={17} color={colors.streak} fill={colors.streak} />
-              <Text style={styles.statText}>24 day streak</Text>
+              <Text style={styles.statText}>{streak} day streak</Text>
             </View>
             <View style={styles.stat}>
               <icons.CircleCheck size={17} color={colors.accent} />
-              <Text style={styles.statText}>142 completed</Text>
+              <Text style={styles.statText}>{completed} completed</Text>
             </View>
           </View>
         </View>
         <View style={{ gap: 12 }}>
           <Text style={styles.block}>Activity</Text>
           <View style={styles.heatCard}>
-            {rows.map((row, rowIndex) => (
+            {activity.map((row, rowIndex) => (
               <View key={rowIndex} style={styles.heatRow}>
                 {row.map((level, cell) => (
                   <View key={cell} style={[styles.cell, { backgroundColor: heat[level] }]} />
@@ -74,16 +77,20 @@ export function ProfileScreen() {
         </View>
         <View style={{ gap: 14 }}>
           <Text style={styles.block}>Achievements</Text>
-          <View style={styles.badges}>
-            {badges.map((badge) => (
-              <View key={badge.label} style={styles.badge}>
-                <View style={[styles.ring, { borderColor: badge.color }]}>
-                  <badge.Icon size={19} color={badge.color} />
+          {badgeList.length === 0 ? (
+            <Text style={styles.age}>No achievements yet. Complete a task to start one.</Text>
+          ) : (
+            <View style={styles.badges}>
+              {badgeList.map((badge) => (
+                <View key={badge.label} style={styles.badge}>
+                  <View style={[styles.ring, { borderColor: badge.color }]}>
+                    <badge.Icon size={19} color={badge.color} />
+                  </View>
+                  <Text style={styles.badgeLabel}>{badge.label}</Text>
                 </View>
-                <Text style={styles.badgeLabel}>{badge.label}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </Screen>
@@ -93,7 +100,8 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 24, gap: 20 },
   identity: { alignItems: "center", gap: 8 },
-  portrait: { width: 78, height: 78, borderRadius: 39 },
+  portrait: { width: 78, height: 78, borderRadius: 39, alignItems: "center", justifyContent: "center" },
+  initials: { color: colors.onAccent, fontSize: 26, fontWeight: "800" },
   name: { color: colors.text, fontSize: 26, fontWeight: "700" },
   age: { color: colors.secondary, fontSize: 12 },
   level: { color: colors.text, fontSize: 14, fontWeight: "700" },

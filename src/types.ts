@@ -1,4 +1,11 @@
-export type Category = "study" | "fitness" | "hygiene" | "work" | "personal" | "other";
+export enum Category {
+  Study = "study",
+  Fitness = "fitness",
+  Hygiene = "hygiene",
+  Work = "work",
+  Personal = "personal",
+  Other = "other",
+}
 export type ItemKind = "goal" | "habit" | "deadline";
 export type PokeState = "poke" | "sent" | "off";
 

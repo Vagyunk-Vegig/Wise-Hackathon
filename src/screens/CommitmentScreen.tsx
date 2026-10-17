@@ -3,12 +3,13 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
 import { PageHeader, PrimaryButton, Screen, SecondaryButton } from "../components/ui";
+import { PENALTY_FT } from "../sample";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
 const rules = [
-  ["Amount", "2.00 EUR / missed task"],
+  ["Amount", `${PENALTY_FT} Ft / missed task`],
   ["Destination", "Charity · saved"],
   ["Eligible", "Work tasks"],
   ["Cutoff", "23:59 · Budapest"],
@@ -41,7 +42,7 @@ export function CommitmentScreen() {
             <View style={styles.cardHead}>
               <Text style={styles.cardTitle}>At risk tonight</Text>
               <View style={styles.chip}>
-                <Text style={styles.chipText}>2.00 EUR</Text>
+                <Text style={styles.chipText}>{PENALTY_FT} Ft</Text>
               </View>
             </View>
             <Text style={styles.cardMeta}>Finish project report is still open</Text>

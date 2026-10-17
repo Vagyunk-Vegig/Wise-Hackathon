@@ -34,16 +34,16 @@ import {
   Users,
   Zap,
 } from "lucide-react-native";
-import type { Category } from "../types";
+import { Category } from "../types";
 import { colors } from "../theme";
 
 export const categoryMeta: Record<Category, { color: string; Icon: typeof BookOpen }> = {
-  study: { color: colors.study, Icon: BookOpen },
-  fitness: { color: colors.fitness, Icon: Zap },
-  hygiene: { color: colors.hygiene, Icon: Droplet },
-  work: { color: colors.work, Icon: BriefcaseBusiness },
-  personal: { color: colors.personal, Icon: Heart },
-  other: { color: colors.other, Icon: ListMinus },
+  [Category.Study]: { color: colors.study, Icon: BookOpen },
+  [Category.Fitness]: { color: colors.fitness, Icon: Zap },
+  [Category.Hygiene]: { color: colors.hygiene, Icon: Droplet },
+  [Category.Work]: { color: colors.work, Icon: BriefcaseBusiness },
+  [Category.Personal]: { color: colors.personal, Icon: Heart },
+  [Category.Other]: { color: colors.other, Icon: ListMinus },
 };
 
 export const icons = {

@@ -2,7 +2,6 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { icons } from "../components/Icons";
 import { Screen, SecondaryButton, TopBar } from "../components/ui";
-import { rankings } from "../sample";
 import { colors } from "../theme";
 import { useRootNav } from "../routes";
 import { useStore } from "../store";
@@ -10,8 +9,18 @@ import { useStore } from "../store";
 export function LeaderboardScreen() {
   const navigation = useNavigation();
   const root = useRootNav();
-  const { streak, totalXp, friends } = useStore();
+  const { streak, totalXp, users, currentUser } = useStore();
   const progress = (totalXp % 500) / 500;
+  const rows = [...users]
+    .sort((a, b) => b.streak - a.streak || b.xp - a.xp)
+    .map((user, index) => ({
+      rank: index + 1,
+      name: user.id === currentUser?.id ? "You" : user.username,
+      initials: user.initials,
+      color: user.color,
+      streak: user.streak,
+      you: user.id === currentUser?.id,
+    }));
 
   return (
     <Screen>
@@ -21,7 +30,7 @@ export function LeaderboardScreen() {
           <Text style={styles.title}>Leaderboard</Text>
           <Text style={styles.sub}>This week</Text>
         </View>
-        {friends.length === 0 ? (
+        {rows.length === 0 ? (
           <View style={styles.empty}>
             <icons.Users size={24} color={colors.accent} />
             <Text style={styles.emptyTitle}>Start your streak together.</Text>
@@ -30,7 +39,7 @@ export function LeaderboardScreen() {
           </View>
         ) : (
           <View style={{ gap: 8 }}>
-            {rankings.map((row) => (
+            {rows.map((row) => (
               <View key={row.rank} style={[styles.row, row.you && styles.you]}>
                 <Text style={[styles.rank, row.rank === 1 && { color: colors.accent }]}>{row.rank}</Text>
                 <View style={[styles.avatar, row.you && styles.youAvatar]}>
