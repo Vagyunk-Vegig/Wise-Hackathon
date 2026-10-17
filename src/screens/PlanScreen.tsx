@@ -9,6 +9,7 @@ import { hasDatedItemOn, hasHabitOn, itemsForDate } from "../schedule";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import { useRootNav, type PlanStackParamList } from "../routes";
+import type { Item } from "../types";
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -19,8 +20,14 @@ export function PlanScreen() {
   const [mode, setMode] = useState<"calendar" | "list">("list");
   const [cursor, setCursor] = useState({ year: 2026, month: 10 });
   const [selected, setSelected] = useState("2026-10-20");
-  const planned = items.filter((item) => item.date > TODAY && item.kind !== "habit");
-  const upcoming = [...new Set(planned.map((item) => item.date))].sort();
+  const dated = items.filter((item) => item.kind !== "habit" && !item.done && item.date >= TODAY);
+  const upcoming = [...new Set([TODAY, ...dated.map((item) => item.date)])]
+    .sort()
+    .map((date) => ({
+      date,
+      group: (date === TODAY ? itemsForDate(items, date) : dated.filter((item) => item.date === date)).filter((item) => !item.done),
+    }))
+    .filter((entry) => entry.group.length > 0);
   const openCreate = (date?: string) => root?.navigate("Create", { date });
 
   return (
@@ -43,23 +50,17 @@ export function PlanScreen() {
               <SecondaryButton label="Create" onPress={() => openCreate()} />
             </View>
           ) : (
-            <View style={{ gap: 12 }}>
-              <SectionLabel title="UPCOMING TASKS" />
-              {upcoming.map((date) => {
-                const group = planned.filter((item) => item.date === date);
-                return (
-                  <View key={date} style={{ gap: 8 }}>
-                    <Pressable onPress={() => navigation.navigate("Day", { date })} style={styles.dayHead}>
-                      <Text style={styles.dayTitle}>{shortDate(date)}</Text>
-                      <Text style={styles.dayCount}>{group.length}</Text>
-                      <icons.ChevronRight size={14} color={colors.secondary} />
-                    </Pressable>
-                    {group.map((item) => (
-                      <ItemRow key={item.id} item={item} />
-                    ))}
-                  </View>
-                );
-              })}
+            <View style={{ gap: 16 }}>
+              {upcoming.map(({ date, group }) => (
+                <View key={date} style={{ gap: 8 }}>
+                  <Pressable onPress={() => navigation.navigate("Day", { date })} style={styles.dayHead}>
+                    <Text style={styles.dayTitle}>{shortDate(date)}</Text>
+                    <Text style={styles.dayCount}>{group.length}</Text>
+                    <icons.ChevronRight size={14} color={colors.secondary} />
+                  </Pressable>
+                  <DayTypeList date={date} items={group} />
+                </View>
+              ))}
             </View>
           )
         ) : (
@@ -67,6 +68,40 @@ export function PlanScreen() {
         )}
       </ScrollView>
     </Screen>
+  );
+}
+
+function DayTypeList({ date, items }: { date: string; items: Item[] }) {
+  const goals = items.filter((item) => item.kind === "goal");
+  const habits = items.filter((item) => item.kind === "habit");
+  const deadlines = items.filter((item) => item.kind === "deadline");
+  return (
+    <View style={{ gap: 12 }}>
+      {goals.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <SectionLabel title={date === TODAY ? "TODAY'S GOALS" : "GOALS"} />
+          {goals.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </View>
+      ) : null}
+      {habits.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <SectionLabel title="HABITS" />
+          {habits.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </View>
+      ) : null}
+      {deadlines.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <SectionLabel title="DEADLINE" />
+          {deadlines.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 

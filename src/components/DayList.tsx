@@ -11,6 +11,10 @@ export function atRisk(items: Item[]) {
   return items.filter((item) => item.money && item.kind !== "deadline" && !item.done).length * PENALTY_FT;
 }
 
+function openFirst(items: Item[]) {
+  return [...items].sort((a, b) => Number(a.done) - Number(b.done));
+}
+
 function dayIsClear(items: Item[]) {
   const moneyItems = items.filter((item) => item.money && item.kind !== "deadline");
   return moneyItems.length > 0 && moneyItems.every((item) => item.done);
@@ -77,9 +81,9 @@ export function DayList({
   onToggle?: (id: string) => void;
   empty?: React.ReactNode;
 }) {
-  const goals = items.filter((item) => item.kind === "goal");
-  const habits = items.filter((item) => item.kind === "habit");
-  const deadlines = items.filter((item) => item.kind === "deadline");
+  const goals = openFirst(items.filter((item) => item.kind === "goal"));
+  const habits = openFirst(items.filter((item) => item.kind === "habit"));
+  const deadlines = openFirst(items.filter((item) => item.kind === "deadline"));
   const doneGoals = goals.filter((item) => item.done).length;
   const label = date === TODAY ? `Today · ${shortDate(date)}` : shortDate(date);
 
