@@ -6,7 +6,7 @@ import { IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
 import type { RootStackParamList } from "../routes";
 
-const heat = ["#B79AFF", "#9161BF", "#624080", "#281B3D"];
+const heat = [colors.heat4, colors.heat3, colors.heat2, colors.heat1];
 const rows = [
   [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
   [2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1],

@@ -29,15 +29,15 @@ export const sampleRequests: Person[] = [
 ];
 
 export const sampleFriends: Person[] = [
-  { id: "alex", name: "Alex", initials: "AL", color: "#B79AFF", meta: "Done today", poke: "off" },
+  { id: "alex", name: "Alex", initials: "AL", color: "#B6FF70", meta: "Done today", poke: "off" },
   { id: "maya", name: "Maya", initials: "MA", color: "#FF9F43", meta: "2 left today", poke: "poke" },
   { id: "sam", name: "Sam", initials: "SA", color: "#5EE0FF", meta: "5 left · poked today", poke: "sent" },
 ];
 
 export const rankings = [
   { rank: 1, name: "Maya", initials: "MA", color: "#FF9F43", streak: 28, you: false },
-  { rank: 2, name: "Alex", initials: "AL", color: "#B79AFF", streak: 24, you: false },
-  { rank: 3, name: "You", initials: "MK", color: "#B79AFF", streak: 6, you: true },
+  { rank: 2, name: "Alex", initials: "AL", color: "#B6FF70", streak: 24, you: false },
+  { rank: 3, name: "You", initials: "MK", color: "#B6FF70", streak: 6, you: true },
   { rank: 4, name: "Sam", initials: "SA", color: "#5EE0FF", streak: 4, you: false },
   { rank: 5, name: "Jordan", initials: "JO", color: "#FF6BB5", streak: 2, you: false },
 ];

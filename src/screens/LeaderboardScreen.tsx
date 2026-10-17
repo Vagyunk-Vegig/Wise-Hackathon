@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   sub: { color: colors.secondary, fontSize: 12, marginTop: 4 },
   row: { height: 64, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 12 },
-  you: { backgroundColor: "rgba(183,154,255,0.04)", borderColor: "rgba(183,154,255,0.31)" },
+  you: { backgroundColor: "rgba(182,255,112,0.04)", borderColor: "rgba(182,255,112,0.31)" },
   rank: { width: 14, color: colors.secondary, fontSize: 14, fontWeight: "700" },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center" },
   youAvatar: { backgroundColor: colors.accent },

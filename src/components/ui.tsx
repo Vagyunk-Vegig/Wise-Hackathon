@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: colors.accent, borderColor: colors.accent, alignItems: "center", justifyContent: "center" },
   chip: { borderRadius: 99, paddingHorizontal: 9, paddingVertical: 5 },
   chipHot: { backgroundColor: "rgba(255,107,107,0.09)" },
-  chipSoon: { backgroundColor: "rgba(183,154,255,0.09)" },
+  chipSoon: { backgroundColor: "rgba(182,255,112,0.12)" },
   chipBad: { backgroundColor: "rgba(255,138,191,0.14)" },
   chipText: { fontSize: 11, fontWeight: "700" },
   quiet: { paddingHorizontal: 14 },
