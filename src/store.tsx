@@ -190,7 +190,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       for (const task of board.tasks) {
         const item = rowToItem(task);
         if (item.done) counts[task.user_id] = (counts[task.user_id] ?? 0) + 1;
-        if (item.kind !== "goal") continue;
+        if (item.date !== TODAY || item.kind === "deadline") continue;
         const current = daily[task.user_id] ?? { done: 0, total: 0 };
         daily[task.user_id] = { done: current.done + (item.done ? 1 : 0), total: current.total + 1 };
       }
@@ -278,7 +278,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
           setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
-          if (item.kind === "goal") {
+          if (item.date === TODAY && item.kind !== "deadline") {
             setDailyTasks((current) => {
               const previous = current[currentUser.id] ?? { done: 0, total: 0 };
               return { ...current, [currentUser.id]: { ...previous, done: previous.done + 1 } };

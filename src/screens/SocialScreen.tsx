@@ -75,7 +75,7 @@ export function SocialScreen() {
             return (
               <PersonRow
                 key={person.id}
-                person={{ ...person, meta: tasks.total === 0 ? "No daily tasks" : `${tasks.done}/${tasks.total}` }}
+                person={{ ...person, meta: tasks.total === 0 ? "No tasks today" : `${tasks.done}/${tasks.total}` }}
                 action={person.poke === "sent" ? "Sent" : "Poke"}
                 disabled={person.poke !== "poke"}
                 onPress={() => poke(person.id)}
