@@ -15,18 +15,17 @@ const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
 export function PlanScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<PlanStackParamList>>();
   const root = useRootNav();
-  const { items, streak, totalXp } = useStore();
+  const { items, streak } = useStore();
   const [mode, setMode] = useState<"calendar" | "list">("list");
   const [cursor, setCursor] = useState({ year: 2026, month: 10 });
   const [selected, setSelected] = useState("2026-10-20");
-  const progress = (totalXp % 500) / 500;
   const planned = items.filter((item) => item.date > TODAY && item.kind !== "habit");
   const upcoming = [...new Set(planned.map((item) => item.date))].sort();
   const openCreate = (date?: string) => root?.navigate("Create", { date });
 
   return (
     <Screen>
-      <TopBar progress={progress} streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
+      <TopBar streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.segment}>
           {(["calendar", "list"] as const).map((key) => (

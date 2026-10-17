@@ -11,8 +11,7 @@ import type { Person } from "../types";
 
 export function SocialScreen() {
   const root = useRootNav();
-  const { requests, friends, outgoing, users, currentUser, streak, totalXp, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke } = useStore();
-  const progress = (totalXp % 500) / 500;
+  const { requests, friends, outgoing, users, currentUser, streak, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke } = useStore();
   const [query, setQuery] = useState("");
   const matches = useMemo(() => searchByUsername(users, query, currentUser?.id).map(toPerson), [users, query, currentUser?.id]);
   const searching = query.trim().length > 0;
@@ -26,7 +25,7 @@ export function SocialScreen() {
 
   return (
     <Screen>
-      <TopBar progress={progress} streak={streak} onAvatar={() => root.navigate("Profile")} onSettings={() => root.navigate("Settings")} />
+      <TopBar streak={streak} onAvatar={() => root.navigate("Profile")} onSettings={() => root.navigate("Settings")} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View>
           <Text style={styles.title}>Social</Text>

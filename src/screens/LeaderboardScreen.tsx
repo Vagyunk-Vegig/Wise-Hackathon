@@ -9,8 +9,7 @@ import { useStore } from "../store";
 export function LeaderboardScreen() {
   const navigation = useNavigation();
   const root = useRootNav();
-  const { streak, totalXp, users, currentUser } = useStore();
-  const progress = (totalXp % 500) / 500;
+  const { streak, users, currentUser } = useStore();
   const rows = [...users]
     .sort((a, b) => b.streak - a.streak || b.xp - a.xp)
     .map((user, index) => ({
@@ -24,7 +23,7 @@ export function LeaderboardScreen() {
 
   return (
     <Screen>
-      <TopBar progress={progress} streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
+      <TopBar streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
       <ScrollView contentContainerStyle={styles.body}>
         <View>
           <Text style={styles.title}>Leaderboard</Text>
