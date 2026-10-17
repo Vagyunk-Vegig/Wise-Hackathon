@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<title>habit — design reference</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; background: #080D0B; color: #F5F7F5; }
+  body {
+    font-family: "SF Pro Text", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+    background:
+      radial-gradient(900px 420px at 0% 0%, rgba(182,255,112,0.08), transparent 55%),
+      #080D0B;
+    padding: 9mm 11mm 9mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: #A4ADA7;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 6mm;
+  }
+  .top b { color: #B6FF70; font-weight: 600; }
+  .split {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 98mm 1fr;
+    gap: 8mm;
+  }
+  .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .caption { margin: 3mm 0 0; color: #A4ADA7; font-size: 10px; letter-spacing: 0.04em; }
+  .notes { padding-top: 2mm; }
+  .kicker {
+    color: #B6FF70;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 650;
+    margin: 0 0 4px;
+  }
+  h1 { font-size: 28px; line-height: 1.05; letter-spacing: -0.035em; font-weight: 620; margin: 0 0 8px; }
+  h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #A4ADA7; font-weight: 650; margin: 13px 0 5px; }
+  .notes p { margin: 0 0 6px; color: #D7E0DA; }
+  .notes ul, .notes ol { margin: 0; padding: 0 0 0 16px; color: #D7E0DA; }
+  .notes li { margin: 0 0 3px; }
+  .notes strong { color: #F5F7F5; font-weight: 620; }
+  .call {
+    margin-top: 10px;
+    background: #111815;
+    border: 1px solid #252D28;
+    border-radius: 12px;
+    padding: 9px 11px;
+    color: #D7E0DA;
+  }
+  .call b { color: #B6FF70; }
+
+  /* phone */
+  .device {
+    width: 340px;
+    height: 700px;
+    background: #050807;
+    border: 1px solid #2A3330;
+    border-radius: 36px;
+    padding: 8px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .screen {
+    height: 100%;
+    background: #080D0B;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .status {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px 0;
+    font-size: 12px;
+    font-weight: 650;
+  }
+  .status .sigs { display: flex; gap: 5px; align-items: center; color: #F5F7F5; }
+  .app { flex: 1; min-height: 0; padding: 6px 14px 14px; display: flex; flex-direction: column; }
+  .app-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .app-head h3 { margin: 0; font-size: 28px; letter-spacing: -0.04em; font-weight: 650; }
+  .date { margin: 1px 0 0; color: #A4ADA7; font-size: 12px; }
+  .topbar { display: flex; align-items: center; gap: 8px; }
+  .avatar-wrap { position: relative; width: 40px; height: 40px; flex: 0 0 auto; }
+  .topbar .ava { width: 40px; height: 40px; font-size: 13px; }
+  .lvl-badge {
+    position: absolute; right: -5px; bottom: -4px;
+    min-width: 16px; height: 16px; padding: 0 3px;
+    border-radius: 999px; background: #B6FF70; color: #10210A;
+    border: 2px solid #080D0B;
+    font-size: 9px; font-weight: 800; line-height: 12px;
+    display: grid; place-items: center;
+  }
+  .topbar-mid { flex: 1; min-width: 0; }
+  .topbar-mid b { display: block; font-size: 15px; letter-spacing: -0.02em; line-height: 1.15; }
+  .topbar-mid span { display: block; margin-top: 2px; color: #A4ADA7; font-size: 11px; font-weight: 600; }
+  .xpbar { flex: 1; height: 8px; margin-left: 6px; background: #1C2621; border-radius: 99px; overflow: hidden; min-width: 28px; }
+  .xpbar span { display: block; height: 100%; width: 36%; background: #B6FF70; border-radius: 99px; }
+  .xpbar.block { flex: none; width: 100%; margin: 8px 0 4px; }
+  .streak-pill { display: flex; align-items: center; gap: 3px; color: #FF9F43; font-weight: 760; font-size: 15px; letter-spacing: -0.03em; flex: 0 0 auto; }
+  .streak-pill svg { width: 15px; height: 15px; display: block; }
+  .balance { margin: 12px 0 2px; }
+  .balance .k { margin: 0; color: #A4ADA7; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+  .balance .n { margin: 1px 0 0; font-size: 36px; line-height: 1; letter-spacing: -0.05em; font-weight: 640; }
+  .balance .s { margin: 3px 0 0; color: #A4ADA7; font-size: 12px; }
+  .balance.hero { margin: 26px 0 30px; text-align: center; }
+  .balance.hero .n { font-size: 48px; color: #F5F7F5; font-weight: 650; }
+  .daymini { margin: 10px 0 0; text-align: center; color: #8B968F; font-size: 12px; font-weight: 600; }
+  .topbar.nolevel .streak-pill { margin-left: auto; }
+  .sec-label .count { color: #F5F7F5; letter-spacing: 0; text-transform: none; font-size: 13px; font-weight: 720; }
+  .row.goal { position: relative; padding-left: 14px; overflow: hidden; }
+  .row.goal::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: #FF4D4D;
+  }
+  .row.goal.done { opacity: 1; }
+  .row.goal.done::before { background: #B6FF70; }
+  .row.goal.done .ttl, .row.goal.done .xp, .row.goal.done .ico, .row.goal.done .fine { opacity: 0.48; }
+  .fine {
+    width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto;
+    border: 1px solid #3C4A42; color: #8B968F;
+    font-size: 9px; font-weight: 750; line-height: 1;
+    display: grid; place-items: center;
+  }
+  .dayhead { margin: 12px 0 0; }
+  .dayhead b { display: block; font-size: 26px; letter-spacing: -0.04em; font-weight: 650; line-height: 1.05; }
+  .dayhead span { display: block; margin-top: 2px; color: #A4ADA7; font-size: 12px; }
+  .dayhead.next { margin-top: 14px; padding-top: 10px; border-top: 1px solid #252D28; }
+  .row.due { border-color: #FF4D4D; background: #1A1214; box-shadow: inset 0 0 0 1px #FF4D4D; }
+  .chip.hot { background: rgba(255,77,77,0.16); color: #FF6B6B; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 12px;
+    background: #171E1A; border: 1px solid #252D28;
+    display: grid; place-items: center; color: #F5F7F5;
+  }
+  .back {
+    display: flex; align-items: center; gap: 6px;
+    color: #F5F7F5; font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+  .seg {
+    display: flex; background: #111815; border: 1px solid #252D28;
+    border-radius: 999px; padding: 3px; margin: 12px 0 10px;
+  }
+  .seg span {
+    flex: 1; text-align: center; font-size: 12px; font-weight: 620;
+    color: #A4ADA7; padding: 6px 0; border-radius: 999px;
+  }
+  .seg span.on { background: #B6FF70; color: #10210A; }
+  .list { display: flex; flex-direction: column; gap: 7px; }
+  .row {
+    display: flex; align-items: center; gap: 8px;
+    background: #111815; border: 1px solid #252D28;
+    border-radius: 14px; padding: 8px 10px; min-height: 52px;
+  }
+  .row.done { opacity: 0.48; }
+  .ico {
+    width: 32px; height: 32px; border-radius: 10px; flex: 0 0 auto;
+    display: grid; place-items: center;
+  }
+  .ico.study { background: rgba(94,224,255,0.14); color: #5EE0FF; }
+  .ico.fit { background: rgba(255,159,67,0.16); color: #FF9F43; }
+  .ico.hyg { background: rgba(126,224,198,0.14); color: #7EE0C6; }
+  .ico.work { background: rgba(179,136,255,0.16); color: #B388FF; }
+  .ico.per { background: rgba(255,107,181,0.16); color: #FF6BB5; }
+  .ico.oth { background: rgba(164,173,167,0.14); color: #A4ADA7; }
+  .mid { flex: 1; min-width: 0; }
+  .ttl { font-size: 13px; font-weight: 620; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 11px; color: #A4ADA7; margin-top: 1px; }
+  .xp { color: #B6FF70; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .check {
+    width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+    border: 1.5px solid #3C4A42;
+  }
+  .check.on {
+    background: #B6FF70; border-color: #B6FF70;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310210A' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5 10 17.5 19 7.5'/></svg>");
+    background-repeat: no-repeat; background-position: center; background-size: 13px;
+  }
+  .btn {
+    margin-top: auto;
+    height: 46px; border-radius: 14px;
+    background: #B6FF70; color: #10210A;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-weight: 720; font-size: 14.5px;
+  }
+  .btn.ghost {
+    background: #111815; color: #F5F7F5; border: 1px solid #252D28; margin-top: 8px;
+  }
+  .tabbar {
+    height: 58px; border-top: 1px solid #252D28;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    background: #0C1210; padding: 0 10px 2px;
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #8B968F; font-size: 8px; font-weight: 650; line-height: 1; }
+  .tab.on { color: #B6FF70; }
+  .fab {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #B6FF70; color: #10210A;
+    display: grid; place-items: center;
+    margin: 0;
+  }
+  svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  svg.sm { width: 14px; height: 14px; }
+
+  .sec-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 2px 0 6px; color: #A4ADA7; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+  }
+  .sec-label a { color: #B6FF70; letter-spacing: 0; text-transform: none; font-size: 12px; font-weight: 650; }
+  .dcard {
+    background: #111815; border: 1px solid #252D28; border-radius: 14px;
+    padding: 10px 12px; margin-bottom: 7px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .chip {
+    font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 8px; white-space: nowrap;
+    background: rgba(182,255,112,0.12); color: #B6FF70;
+  }
+  .chip.warn { background: rgba(255,159,67,0.16); color: #FF9F43; }
+  .chip.bad { background: rgba(255,107,181,0.14); color: #FF8ABF; }
+  .day {
+    background: #111815; border: 1px solid #252D28; border-radius: 14px;
+    padding: 8px 10px; margin-bottom: 6px;
+  }
+  .day .h { display: flex; justify-content: space-between; font-size: 12px; font-weight: 650; }
+  .day .h span { color: #A4ADA7; font-weight: 600; }
+  .day p { margin: 3px 0 0; color: #A4ADA7; font-size: 11px; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 6px; }
+  .cal-head b { font-size: 16px; letter-spacing: -0.02em; }
+  .wk { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #6E7872; font-size: 10px; font-weight: 700; margin-bottom: 4px; }
+  .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cell {
+    height: 32px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 620; color: #D7E0DA; position: relative;
+  }
+  .cell.empty { visibility: hidden; }
+  .cell.today { box-shadow: inset 0 0 0 1.5px #B6FF70; }
+  .cell.sel { background: #B6FF70; color: #10210A; }
+  .dots { display: flex; gap: 2px; height: 5px; margin-top: 1px; }
+  .dot { width: 3px; height: 3px; border-radius: 50%; background: rgba(182,255,112,0.55); }
+  .dot.task { background: #FF9F43; }
+  .cell.sel .dot { background: #10210A; }
+  .sheet {
+    margin-top: 10px; background: #111815; border: 1px solid #252D28; border-radius: 16px; padding: 10px;
+  }
+  .sheet .h { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+
+  .types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 10px; }
+  .type {
+    background: #111815; border: 1px solid #252D28; border-radius: 12px;
+    padding: 8px 6px; text-align: center;
+  }
+  .type.on { border-color: #B6FF70; background: rgba(182,255,112,0.08); }
+  .type b { display: block; font-size: 11px; }
+  .type span { display: block; color: #A4ADA7; font-size: 9px; margin-top: 2px; }
+  .field { margin-bottom: 8px; }
+  .field label { display: block; font-size: 11px; color: #A4ADA7; margin-bottom: 4px; }
+  .input {
+    background: #111815; border: 1px solid #252D28; border-radius: 12px;
+    padding: 9px 10px; font-size: 13px; color: #F5F7F5;
+  }
+  .input.ph { color: #6E7872; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .cat {
+    border: 1px solid #252D28; background: #111815; color: #D7E0DA;
+    border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 620;
+  }
+  .cat.on { border-color: #B6FF70; color: #B6FF70; }
+  .help { color: #A4ADA7; font-size: 10.5px; margin: 2px 0 8px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
+  .stat { background: #111815; border: 1px solid #252D28; border-radius: 12px; padding: 8px; }
+  .stat b { display: block; font-size: 16px; letter-spacing: -0.03em; }
+  .stat span { color: #A4ADA7; font-size: 10px; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 64px; padding: 8px 4px 0; }
+  .bars i { flex: 1; background: #B6FF70; border-radius: 5px 5px 2px 2px; display: block; opacity: 0.95; }
+  .bars i.off { background: #1C2621; }
+  .bar-labels { display: flex; gap: 6px; color: #6E7872; font-size: 9px; font-weight: 700; text-align: center; }
+  .bar-labels span { flex: 1; }
+  .meter { height: 6px; background: #1C2621; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .meter span { display: block; height: 100%; background: #B6FF70; border-radius: 99px; }
+  .catrow { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; }
+  .catrow em { width: 8px; height: 8px; border-radius: 50%; display: block; font-style: normal; }
+  .catrow .track { flex: 1; height: 5px; background: #1C2621; border-radius: 99px; overflow: hidden; }
+  .catrow .track span { display: block; height: 100%; }
+
+  .who { display: flex; align-items: center; gap: 10px; }
+  .ava {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: #B6FF70; color: #10210A; display: grid; place-items: center;
+    font-weight: 750; font-size: 16px;
+  }
+  .level {
+    margin-top: 12px; background: #111815; border: 1px solid #252D28; border-radius: 16px; padding: 12px;
+  }
+  .level .r { display: flex; justify-content: space-between; align-items: baseline; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .heat { margin-top: 10px; }
+  .hg { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .hc { height: 14px; border-radius: 3px; background: #141C18; border: 1px solid #24302A; }
+  .hc.pad { background: transparent; border-color: transparent; }
+  .hc.a1 { background: rgba(182,255,112,0.28); }
+  .hc.a2 { background: rgba(182,255,112,0.5); }
+  .hc.a3 { background: rgba(182,255,112,0.75); }
+  .hc.a4 { background: #B6FF70; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+  .sheet-head b { font-size: 16px; letter-spacing: -0.02em; }
+  .portrait { width: 78px; height: 78px; border-radius: 50%; object-fit: cover; display: block; margin: 8px auto 6px; background: #333; }
+  .who-name { text-align: center; font-size: 26px; letter-spacing: -0.04em; font-weight: 680; margin: 0; }
+  .who-age { text-align: center; color: #A4ADA7; font-size: 13px; margin: 2px 0 8px; }
+  .lvl-name { text-align: center; font-size: 15px; font-weight: 680; margin: 0 0 8px; }
+  .lvl-pill { height: 28px; background: #2A3330; border-radius: 999px; overflow: hidden; }
+  .lvl-pill span { display: flex; align-items: center; justify-content: flex-end; height: 100%; width: 69%; background: #B6FF70; color: #10210A; font-weight: 760; font-size: 12px; padding-right: 12px; border-radius: 999px; }
+  .iconstat { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 680; }
+  .iconstat svg { width: 16px; height: 16px; }
+  .block-title { font-size: 15px; font-weight: 720; margin: 12px 0 0; letter-spacing: -0.02em; }
+  .actgrid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-top: 6px; }
+  .ac { display: block; height: 14px; border-radius: 3px; background: #14301C; }
+  .ac.g2 { background: #2E8A45; }
+  .ac.g3 { background: #5ED86A; }
+  .ac.g4 { background: #B6FF70; }
+  .achrow { display: flex; gap: 4px; margin-top: 8px; }
+  .ach { flex: 1; text-align: center; }
+  .ach i { width: 34px; height: 34px; margin: 0 auto 3px; border-radius: 50%; border: 1.5px solid #B6FF70; color: #B6FF70; display: grid; place-items: center; }
+  .ach i.o { border-color: #FF9F43; color: #FF9F43; }
+  .ach i.c { border-color: #5EE0FF; color: #5EE0FF; }
+  .ach i.p { border-color: #C084FC; color: #C084FC; }
+  .ach span { display: block; font-size: 8px; line-height: 1.15; color: #D7E0DA; }
+  .badges { display: flex; gap: 6px; margin-top: 8px; }
+  .badge {
+    flex: 1; background: #111815; border: 1px solid #252D28; border-radius: 12px; padding: 8px 6px; text-align: center;
+  }
+  .badge b { display: block; font-size: 10px; }
+  .badge span { color: #A4ADA7; font-size: 9px; }
+  .badge.lock { opacity: 0.55; }
+  .linkrow {
+    margin-top: 8px; background: #111815; border: 1px solid #252D28; border-radius: 14px;
+    padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 620;
+  }
+
+  .friend { align-items: center; }
+  .poke {
+    border-radius: 999px; background: #B6FF70; color: #10210A;
+    font-size: 11px; font-weight: 750; padding: 6px 10px;
+  }
+  .poke.off { background: #1C2621; color: #6E7872; }
+  .banner {
+    background: rgba(255,159,67,0.1); border: 1px solid rgba(255,159,67,0.35);
+    color: #FFC48A; border-radius: 12px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px;
+  }
+  .kv { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid #252D28; font-size: 12px; }
+  .kv span { color: #A4ADA7; }
+  .lockline {
+    margin-top: 8px; color: #A4ADA7; font-size: 11px;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .empty {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 12px;
+  }
+  .empty .ring {
+    width: 54px; height: 54px; border-radius: 50%; border: 1.5px dashed #3C4A42;
+    display: grid; place-items: center; color: #B6FF70; margin-bottom: 10px;
+  }
+  .empty b { font-size: 16px; }
+  .empty p { color: #A4ADA7; font-size: 12px; margin: 4px 0 0; }
+
+  /* board */
+  .board { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 8mm; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .sw { border-radius: 12px; overflow: hidden; border: 1px solid #252D28; background: #111815; }
+  .sw i { display: block; height: 36px; }
+  .sw div { padding: 5px 6px 6px; }
+  .sw b { display: block; font-size: 10px; }
+  .sw span { color: #A4ADA7; font-size: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .spec-row { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+  .spec-row .lbl { width: 78px; color: #A4ADA7; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #252D28; }
+  th { color: #A4ADA7; font-weight: 650; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .phases { display: flex; flex-direction: column; gap: 7px; }
+  .phase {
+    display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start;
+    background: #111815; border: 1px solid #252D28; border-radius: 12px; padding: 8px 10px;
+  }
+  .num {
+    width: 28px; height: 28px; border-radius: 50%; background: #B6FF70; color: #10210A;
+    display: grid; place-items: center; font-weight: 750; font-size: 12px;
+  }
+  .phase b { display: block; font-size: 13px; }
+  .phase span { color: #A4ADA7; font-size: 11px; }
+  .cover-title { font-size: 78px; letter-spacing: -0.06em; line-height: 0.9; font-weight: 640; margin: 8px 0 8px; }
+  .cover-title span { color: #B6FF70; }
+  .lede { font-size: 16px; color: #D7E0DA; max-width: 150mm; margin: 0 0 8mm; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8mm; }
+  .pill { border: 1px solid #252D28; background: #111815; border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+  .pill em { color: #B6FF70; font-style: normal; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>01 · Cover</span></div>
+  <div class="kicker">Working title · MVP screens</div>
+  <div class="cover-title">habit<span>.</span></div>
+  <p class="lede">Napi szokások és feladatok egy listán, látható haladással. A UI szövege angol, a jegyzet magyar. A wordmark helyőrző, amíg nincs végleges név.</p>
+  <div class="pills">
+    <div class="pill"><em>01</em> Today</div>
+    <div class="pill"><em>02</em> Plan</div>
+    <div class="pill"><em>03</em> Create</div>
+    <div class="pill"><em>04</em> Leaders</div>
+    <div class="pill"><em>05</em> Social</div>
+  </div>
+  <div class="board">
+    <div>
+      <h2 style="margin-top:0">Mire való ez a PDF</h2>
+      <p>Pixel-irány a dizájnhoz, nem kész termék. A számok egy konzisztens mintaállapotból jönnek: 2026. október 16., péntek, 22:35, locale en-US, időzóna Europe/Budapest.</p>
+      <h2>Termék ígérete</h2>
+      <ul>
+        <li>Ma mit kell megcsinálni, egy érintéssel kész.</li>
+        <li>XP, szint és streak látszik, és ugyanabból a képletből jön.</li>
+        <li>Barát bökhet, de a privát feladatcímek rejtve maradnak.</li>
+        <li>Pénzbeli következmény csak opt-in, előnézettel. Ebben a buildben pénz nem mozog.</li>
+      </ul>
+      <div class="call"><b>Nem másolandó pixel.</b> A specifikáció kiinduló tokenjei kötelező irányt adnak. A pontos sugár, padding és betűméret ebben a dokumentumban a kiinduló rendszer.</div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">Mintaállapot</h2>
+      <table>
+        <tr><th>Mező</th><th>Érték</th></tr>
+        <tr><td>User</td><td>Mina Kovacs · MK</td></tr>
+        <tr><td>Szint</td><td>12 · 180 / 500 XP</td></tr>
+        <tr><td>Összes XP</td><td>5 680</td></tr>
+        <tr><td>Streak</td><td>6 nap · leghosszabb 14</td></tr>
+        <tr><td>Teljesítés</td><td>186 occurrence</td></tr>
+        <tr><td>Ma</td><td>4 / 6 kész, 2 nyitott</td></tr>
+        <tr><td>Kor</td><td>nincs mező</td></tr>
+      </table>
+      <div class="call">Szintképlet: <b>level = floor(xp / 500) + 1</b>. A UI a maradékot írja ki, nem egy beégetett szintet. 320 XP van hátra a 13. szintig.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>02 · Tokens</span></div>
+  <div class="kicker">Design system</div>
+  <h1>Színek, típus, komponensek</h1>
+  <div class="swatches">
+    <div class="sw"><i style="background:#080D0B"></i><div><b>Background</b><span>#080D0B</span></div></div>
+    <div class="sw"><i style="background:#111815"></i><div><b>Surface</b><span>#111815</span></div></div>
+    <div class="sw"><i style="background:#171E1A"></i><div><b>Elevated</b><span>#171E1A</span></div></div>
+    <div class="sw"><i style="background:#252D28"></i><div><b>Border</b><span>#252D28</span></div></div>
+    <div class="sw"><i style="background:#F5F7F5"></i><div><b>Text</b><span>#F5F7F5</span></div></div>
+    <div class="sw"><i style="background:#A4ADA7"></i><div><b>Secondary</b><span>#A4ADA7</span></div></div>
+    <div class="sw"><i style="background:#B6FF70"></i><div><b>Accent</b><span>#B6FF70</span></div></div>
+    <div class="sw"><i style="background:#10210A"></i><div><b>On accent</b><span>#10210A</span></div></div>
+    <div class="sw"><i style="background:#5EE0FF"></i><div><b>Study</b><span>#5EE0FF</span></div></div>
+    <div class="sw"><i style="background:#FF9F43"></i><div><b>Fitness</b><span>#FF9F43</span></div></div>
+    <div class="sw"><i style="background:#7EE0C6"></i><div><b>Hygiene</b><span>#7EE0C6</span></div></div>
+    <div class="sw"><i style="background:#B388FF"></i><div><b>Work</b><span>#B388FF</span></div></div>
+    <div class="sw"><i style="background:#FF6BB5"></i><div><b>Personal</b><span>#FF6BB5</span></div></div>
+    <div class="sw"><i style="background:#6E7872"></i><div><b>Other / disabled</b><span>#6E7872</span></div></div>
+    <div class="sw"><i style="background:#FF9F43"></i><div><b>Warning</b><span>#FF9F43</span></div></div>
+    <div class="sw"><i style="background:#FF8ABF"></i><div><b>Overdue</b><span>#FF8ABF</span></div></div>
+  </div>
+  <div class="split" style="margin-top:7mm; grid-template-columns: 1fr 1fr;">
+    <div>
+      <h2 style="margin-top:0">Méret</h2>
+      <table>
+        <tr><th>Token</th><th>Érték</th></tr>
+        <tr><td>Screen padding</td><td>16</td></tr>
+        <tr><td>Card radius / padding</td><td>16 / 12–14</td></tr>
+        <tr><td>Button height / radius</td><td>52 / 14</td></tr>
+        <tr><td>Touch target</td><td>min. 44</td></tr>
+        <tr><td>Icon tile</td><td>36, radius 12</td></tr>
+        <tr><td>Tab bar + safe area</td><td>64 + home</td></tr>
+        <tr><td>Space</td><td>4, 8, 12, 16, 20, 24, 32</td></tr>
+      </table>
+      <h2>Típus</h2>
+      <p style="font-size:28px; margin:0; letter-spacing:-0.04em; font-weight:650;">Today</p>
+      <p style="margin:2px 0 0; color:#A4ADA7;">Screen title · 28 / 650</p>
+      <p style="font-size:15px; margin:8px 0 0; font-weight:620;">Drink water</p>
+      <p style="margin:0; color:#A4ADA7; font-size:12px;">A kis kártyán csak a cím. Alatta nincs típus-sor. SF Pro, vagy ennek megfelelő groteszk.</p>
+    </div>
+    <div>
+      <h2 style="margin-top:0">Állapotok</h2>
+      <div class="spec-row"><div class="lbl">Primary</div><div class="btn" style="margin:0; width:180px; height:40px;">+ Add task</div></div>
+      <div class="spec-row"><div class="lbl">Secondary</div><div class="btn ghost" style="margin:0; width:180px; height:40px;">Keep off</div></div>
+      <div class="spec-row"><div class="lbl">Segment</div><div class="seg" style="margin:0; width:220px;"><span class="on">Calendar</span><span>List</span></div></div>
+      <div class="spec-row"><div class="lbl">Open</div><div class="check"></div><span style="color:#A4ADA7">nem csak szín: üres karika</span></div>
+      <div class="spec-row"><div class="lbl">Done</div><div class="check on"></div><span style="color:#A4ADA7">pipa + lime kitöltés</span></div>
+      <div class="spec-row"><div class="lbl">Chips</div><span class="chip">6 days left</span><span class="chip warn">Due today</span><span class="chip bad">Overdue</span></div>
+      <div class="call">A kategória színe mellé mindig ikon és szöveg jár. A fókuszgyűrű lime, 2px. Reduced motion: nincs rugózó animáció.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>03 · Today</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar nolevel">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <p class="daymini">Today · Fri, Oct 16</p>
+          <div class="balance hero"><p class="n">−€4.00</p></div>
+          <div class="sec-label">Today's goals <span class="count">1/2</span></div>
+          <div class="list">
+            <div class="row goal"><div class="ico work"><svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5h8v2"/></svg></div><div class="mid"><div class="ttl">Project report</div></div><div class="xp">+50 XP</div><span class="fine">€</span><div class="check"></div></div>
+            <div class="row goal done"><div class="ico oth"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 8h16M4 12h16M4 16h10"/></svg></div><div class="mid"><div class="ttl">Clean room</div></div><div class="xp">+20 XP</div><span class="fine">€</span><div class="check on"></div></div>
+          </div>
+          <div class="sec-label">Habits</div>
+          <div class="list">
+            <div class="row"><div class="ico per"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg></div><div class="mid"><div class="ttl">Meditate</div></div><div class="xp">+15 XP</div><span class="fine">€</span><div class="check"></div></div>
+            <div class="row done"><div class="ico hyg"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg></div><div class="mid"><div class="ttl">Drink water</div></div><div class="xp">+10 XP</div><span class="fine">€</span><div class="check on"></div></div>
+          </div>
+          <div class="sec-label">Deadline</div>
+          <div class="list">
+            <div class="row"><div class="ico study"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4zM20 5h-7a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h7z"/></svg></div><div class="mid"><div class="ttl">Submit essay</div></div><span class="chip hot">Due today</span></div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Today · egy nap, középen a fehér összeg</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Today</h1>
+      <p>Csak a mai nap. A következő napok a Plan listán vannak, ide nem görgethetők.</p>
+      <h2>Felső sáv</h2>
+      <ul>
+        <li>A bal felső avatár nyitja a profilt, rajta a stats is. Státuszrúd a Todayen nincs.</li>
+        <li>Tűz ikon és a streak, jobbra a fogaskerék.</li>
+        <li>A dátum egy sor, kicsiben, középen: <strong>Today · Fri, Oct 16</strong>.</li>
+      </ul>
+      <h2>Összeg</h2>
+      <ul>
+        <li>Középen, nagyban, fehéren, negatív előjellel: <strong>−€4.00</strong>. Felette és alatta több levegő.</li>
+        <li>A még nyitott pénzes tételek összege. Itt 2 × €2. A kész már nem számít.</li>
+        <li>Nincs „2 still open” sor. A goals fejléc jobb oldalán <strong>1/2</strong>: kész / összes.</li>
+      </ul>
+      <h2>Sorrend</h2>
+      <ul>
+        <li><strong>Today's goals</strong>, bal csík: nyitott piros, kész zöld.</li>
+        <li><strong>Habits</strong>, aztán <strong>Deadline</strong>.</li>
+        <li>Goals és habits: kis € jel. Deadline: nincs.</li>
+      </ul>
+      <div class="call">A −€4.00 előnézet, nem levonás. Pénz csak a cutoff után mozog, ha a szabály be van kapcsolva.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>04 · Plan</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="xpbar"><span></span></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <div class="seg"><span>Calendar</span><span class="on">List</span></div>
+          <div class="sec-label">Upcoming tasks</div>
+          <div class="day"><div class="h">Sat, Oct 17 <span>2</span></div></div>
+          <div class="list">
+            <div class="row goal"><div class="ico study"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4zM20 5h-7a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h7z"/></svg></div><div class="mid"><div class="ttl">Study group</div></div><div class="xp">+25 XP</div><span class="fine">€</span></div>
+            <div class="row goal"><div class="ico work"><svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5h8v2"/></svg></div><div class="mid"><div class="ttl">Clean slides</div></div><div class="xp">+20 XP</div><span class="fine">€</span></div>
+          </div>
+          <div class="day" style="margin-top:8px"><div class="h">Sun, Oct 18 <span>1</span></div></div>
+          <div class="list">
+            <div class="row goal"><div class="ico per"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg></div><div class="mid"><div class="ttl">Call mentor</div></div><div class="xp">+15 XP</div><span class="fine">€</span></div>
+          </div>
+          <div class="day" style="margin-top:8px"><div class="h">Wed, Oct 22 <span>1</span></div></div>
+          <div class="list">
+            <div class="row"><div class="ico study"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4z"/></svg></div><div class="mid"><div class="ttl">Algorithm exam</div></div><span class="chip">6 days left</span></div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Plan · List. Két nézet: Calendar és List.</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Plan · List</h1>
+      <p>A Planen két kapcsoló van: <strong>Calendar</strong> és <strong>List</strong>. Upcoming és Deadlines külön tab nincs.</p>
+      <h2>Lista</h2>
+      <ul>
+        <li>A közelgő taskok nap szerint csoportosítva, darabszámmal.</li>
+        <li>A kártyán csak a cím. Nincs „Task · Today” aláírás.</li>
+        <li>A határidő a due napján ugyanebben a listában áll, a jobb oldalon a hátralévő idő.</li>
+        <li>A ma esedékes deadline nem itt a fő helye: a Today Tasks szekcióban van, piros kerettel.</li>
+        <li>Üres hét: rövid szöveg + Create.</li>
+      </ul>
+      <h2>Days left</h2>
+      <ul>
+        <li>A user időzónájában, éjféltől éjfélig.</li>
+        <li>Ma: <strong>Due today</strong>. Elmúlt: <strong>Overdue</strong>. Jövő: <strong>6 days left</strong>.</li>
+      </ul>
+      <div class="call">A goal sor bal csíkja itt is piros, amíg nyitott. A kis € ugyanaz, mint a Todayen. A deadline sornak nincs pénzjele.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>05 · Calendar</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="xpbar"><span></span></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <div class="seg"><span class="on">Calendar</span><span>List</span></div>
+          <div class="cal-head">
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg></div>
+            <b>October 2026</b>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+          </div>
+          <div class="wk"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div class="grid7">
+            <div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div>
+            <div class="cell">1<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">2<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">3<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">4<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">5<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">6<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">7<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">8<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">9<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">10<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">11<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">12<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">13<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">14<div class="dots"><i class="dot"></i><i class="dot task"></i></div></div>
+            <div class="cell">15<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell today">16<div class="dots"><i class="dot"></i><i class="dot task"></i></div></div>
+            <div class="cell">17<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">18<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">19<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell sel">20<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">21<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">22<div class="dots"><i class="dot"></i><i class="dot task"></i></div></div>
+            <div class="cell">23<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">24<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">25<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">26<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">27<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">28<div class="dots"><i class="dot"></i><i class="dot task"></i></div></div>
+            <div class="cell">29<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">30<div class="dots"><i class="dot"></i></div></div>
+            <div class="cell">31<div class="dots"><i class="dot"></i></div></div>
+          </div>
+          <div class="sheet">
+            <div class="h">Tue, Oct 20 · 2</div>
+            <div class="row"><div class="ico fit"><svg class="i sm" viewBox="0 0 24 24"><path d="M13 3 6 14h6l-1 7 8-12h-6l0-6z"/></svg></div><div class="mid"><div class="ttl">Workout</div></div><div class="xp">+30 XP</div><span class="fine">€</span></div>
+            <div class="row" style="margin-top:6px"><div class="ico per"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg></div><div class="mid"><div class="ttl">Meditate</div></div><div class="xp">+15 XP</div><span class="fine">€</span></div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Calendar · ma karika, kiválasztott nap lime kitöltés</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Plan · Calendar</h1>
+      <p>Hónaprács, mellette a List a másik nézet. Harmadik tab nincs. A hét kezdete a locale-t követi. A minta en-US, ezért vasárnappal kezdődik. Magyar locale-nál hétfő.</p>
+      <h2>Jelölés</h2>
+      <ul>
+        <li><strong>Ma:</strong> lime karika. Itt Oct 16.</li>
+        <li><strong>Kiválasztott:</strong> lime kitöltés, sötét szám. Itt Oct 20, és ez nem a mai nap.</li>
+        <li><strong>Lime pötty:</strong> aznapra ütemezett habit. Napi habitnál szinte minden nap.</li>
+        <li><strong>Narancs pötty:</strong> task vagy deadline is esik arra a napra. Oct 14, 16, 22, 28.</li>
+      </ul>
+      <h2>Viselkedés</h2>
+      <ul>
+        <li>Hónap léptetés előre-hátra.</li>
+        <li>Nap választása az aznapi listát nyitja a rács alatt.</li>
+        <li>Üres nap: barátságos üres állapot + hozzáadás, a dátum előtöltve a Create-ben.</li>
+        <li>A cella keskeny telefonon is maradjon nyomható, legalább 44 magas a találati terület.</li>
+      </ul>
+      <div class="call">A pötty nem a teljesítés. A teljesítés hőtere a Profile naptár. Itt az ütemezés látszik.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>06 · One day</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar nolevel">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <p class="daymini">Sat, Oct 17</p>
+          <div class="balance hero"><p class="n">−€8.00</p></div>
+          <div class="sec-label">Goals <span class="count">0/2</span></div>
+          <div class="list">
+            <div class="row goal"><div class="ico study"><svg class="i sm" viewBox="0 0 24 24"><path d="M4 5h7a3 3 0 0 1 3 3v12a3 3 0 0 0-3-3H4zM20 5h-7a3 3 0 0 0-3 3v12a3 3 0 0 1 3-3h7z"/></svg></div><div class="mid"><div class="ttl">Study group</div></div><div class="xp">+25 XP</div><span class="fine">€</span><div class="check"></div></div>
+            <div class="row goal"><div class="ico work"><svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5h8v2"/></svg></div><div class="mid"><div class="ttl">Clean slides</div></div><div class="xp">+20 XP</div><span class="fine">€</span><div class="check"></div></div>
+          </div>
+          <div class="sec-label">Habits</div>
+          <div class="list">
+            <div class="row"><div class="ico hyg"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg></div><div class="mid"><div class="ttl">Drink water</div></div><div class="xp">+10 XP</div><span class="fine">€</span><div class="check"></div></div>
+            <div class="row"><div class="ico fit"><svg class="i sm" viewBox="0 0 24 24"><path d="M13 3 6 14h6l-1 7 8-12h-6l0-6z"/></svg></div><div class="mid"><div class="ttl">Workout</div></div><div class="xp">+30 XP</div><span class="fine">€</span><div class="check"></div></div>
+          </div>
+          <div class="sec-label">Deadline</div>
+          <div class="list">
+            <div class="row"><div class="mid"><div class="ttl">Nothing due</div></div></div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Másik nap a Planről · a Today nem görget tovább</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Egy nap, nem görgetés</h1>
+      <p>A Today csak a mai tételeket mutatja. A szombat a Plan listából nyílik, és az is egy nap, önálló összeggel.</p>
+      <h2>Ugyanaz a keret</h2>
+      <ul>
+        <li>Nincs szintcsík. A dátum kicsi: <strong>Sat, Oct 17</strong>.</li>
+        <li>Az összeg középen, fehéren: <strong>−€8.00</strong>. Négy nyitott tétel, €2-vel.</li>
+        <li>A goals sor jobbra <strong>0/2</strong>, mert egy sincs kész.</li>
+        <li>Alatta habits, aztán deadline. Következő nap nem lóg be.</li>
+      </ul>
+      <div class="call">A Plan lista sora nyitja ezt a napot. A Today tabon a péntek marad.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>07 · Create</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="back"><svg class="i" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg> Create</div>
+          <div class="types">
+            <div class="type on"><b>Habit</b><span>Repeats</span></div>
+            <div class="type"><b>Task</b><span>Once</span></div>
+            <div class="type"><b>Deadline</b><span>A date</span></div>
+          </div>
+          <div class="field"><label>Title</label><div class="input">Drink water</div></div>
+          <div class="field"><label>Description</label><div class="input ph">Optional</div></div>
+          <div class="field"><label>Category</label>
+            <div class="chips">
+              <span class="cat">Study</span><span class="cat">Fitness</span><span class="cat on">Hygiene</span>
+              <span class="cat">Work</span><span class="cat">Personal</span><span class="cat">Other</span>
+            </div>
+          </div>
+          <div class="field"><label>Starts</label><div class="input">Fri, Oct 16, 2026</div></div>
+          <p class="help">A new occurrence appears each day. You can complete it once per day.</p>
+          <div class="btn">Create habit</div>
+        </div>
+      </div></div>
+      <p class="caption">Create · teljes képernyő, tab bar nélkül</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Create</h1>
+      <p>Egy típus van kiválasztva. A mezők ahhoz igazodnak. Vissza gomb, a tab bar rejtett. Sikeres mentés után a kiinduló tabra esik vissza.</p>
+      <h2>Mezők típusonként</h2>
+      <ul>
+        <li><strong>Title</strong> mindháromnál kötelező.</li>
+        <li><strong>Due date</strong> tasknál a Today-ról ma, deadline-nál kötelező.</li>
+        <li>Frequency nincs a Create-en. A habit az MVP-ben napi, ezt a szöveg mondja, nem egy mező.</li>
+        <li>XP-beállítás nincs a Create-en. A pontot a rendszer adja készre jelöléskor, a user nem választja.</li>
+      </ul>
+      <h2>Validáció</h2>
+      <ul>
+        <li>Üres cím nem megy át. A hiba a mező alatt, szöveggel.</li>
+        <li>Küldés közben a gomb tölt, dupla mentés nincs.</li>
+        <li>Hiba: az értékek megmaradnak. Mégse: nem jön létre rekord.</li>
+      </ul>
+      <div class="call">A kategória kiválasztása lime keret és felirat, nem csak a chip színe.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>08 · Leaderboard</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="xpbar"><span></span></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <div class="dayhead"><b>Leaderboard</b><span>This week</span></div>
+          <div class="list">
+            <div class="row"><b style="width:14px;color:#B6FF70">1</b><div class="ava" style="width:32px;height:32px;font-size:12px;background:#171E1A;color:#FF9F43">MA</div><div class="mid"><div class="ttl">Maya</div></div><span class="streak-pill">28</span></div>
+            <div class="row"><b style="width:14px;color:#A4ADA7">2</b><div class="ava" style="width:32px;height:32px;font-size:12px;background:#171E1A;color:#B6FF70">AL</div><div class="mid"><div class="ttl">Alex</div></div><span class="streak-pill">24</span></div>
+            <div class="row"><b style="width:14px;color:#A4ADA7">3</b><div class="ava" style="width:32px;height:32px;font-size:12px">MK</div><div class="mid"><div class="ttl">You</div></div><span class="streak-pill">6</span></div>
+            <div class="row"><b style="width:14px;color:#A4ADA7">4</b><div class="ava" style="width:32px;height:32px;font-size:12px;background:#171E1A;color:#5EE0FF">SA</div><div class="mid"><div class="ttl">Sam</div></div><span class="streak-pill">4</span></div>
+            <div class="row"><b style="width:14px;color:#A4ADA7">5</b><div class="ava" style="width:32px;height:32px;font-size:12px;background:#171E1A;color:#FF6BB5">JO</div><div class="mid"><div class="ttl">Jordan</div></div><span class="streak-pill">2</span></div>
+          </div>
+          <p class="help">Ranked by current streak. Task titles stay private.</p>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Leaderboard · a Stats tab helye</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Leaderboard</h1>
+      <p>A navigációban a Stats helyén áll. A saját statisztika nem itt van, hanem a profilon.</p>
+      <h2>Mit mutat</h2>
+      <ul>
+        <li>Heti rangsor, aktuális streak szerint.</li>
+        <li>A saját sor kiemelt, <strong>You</strong>.</li>
+        <li>Feladatcím, leírás és pénz nem látszik.</li>
+      </ul>
+      <div class="call">Üres lista, ha még nincs barát: rövid szöveg, és a Social tabra mutató gomb.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>09 · Profile + stats</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="sheet-head">
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg></div>
+            <b>Profile</b>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <img class="portrait" src="avatar-alex.png" alt="">
+          <p class="who-name">Alex</p>
+          <p class="who-age">21 years old</p>
+          <p class="lvl-name">Level 12</p>
+          <div class="lvl-pill"><span>1250/1800</span></div>
+          <div class="pair" style="margin-top:10px">
+            <div class="stat iconstat"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>24 day streak</div>
+            <div class="stat iconstat"><svg viewBox="0 0 24 24" fill="none" stroke="#B6FF70" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="m8.5 12.2 2.4 2.4 4.6-5"/></svg>142 completed</div>
+          </div>
+          <div class="block-title">Activity</div>
+          <div class="actgrid">
+            <i class="ac g4"></i><i class="ac g3"></i><i class="ac g2"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g2"></i><i class="ac g4"></i>
+            <i class="ac g3"></i><i class="ac g4"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g2"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i>
+            <i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i>
+            <i class="ac g4"></i><i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac"></i>
+            <i class="ac g3"></i><i class="ac g4"></i><i class="ac g2"></i><i class="ac g3"></i><i class="ac g4"></i><i class="ac g4"></i><i class="ac g3"></i><i class="ac g2"></i><i class="ac g4"></i><i class="ac"></i><i class="ac"></i><i class="ac"></i>
+          </div>
+          <div class="block-title">Achievements</div>
+          <div class="achrow">
+            <div class="ach"><i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 3 9 10H4l5 4-2 7 5-4 5 4-2-7 5-4h-5z"/></svg></i><span>7 Day Streak</span></div>
+            <div class="ach"><i><svg class="i sm" viewBox="0 0 24 24"><path d="M12 4c2 3 2 5 0 8 3-1 5-1 7 1-3 2-4 5-3 8-2-2-4-2-6 0 1-3 0-6-3-8 2-2 4-2 5-1z"/></svg></i><span>Level 10</span></div>
+            <div class="ach"><i class="o"><svg class="i sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></i><span>50 Tasks</span></div>
+            <div class="ach"><i class="c"><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h10l-3-3M15 12l-3 3M19 6v12"/></svg></i><span>Early Bird</span></div>
+            <div class="ach"><i class="p"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 3s2 4 2 6c1-.6 2-1.6 2-1.6S18 10 18 13a6 6 0 1 1-12 0c0-2 1-3.4 2-4.6C9 10 10 11 10.5 11 10 8 11 5 12 3z"/></svg></i><span>Longest streak</span></div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Profil és stats együtt · a bal felső avatár nyitja</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Profil és stats</h1>
+      <p>A két oldal egy. Nem tab: a bal felső avatár nyitja, vissza gombbal. A sávban helyette Leaderboard és Social van.</p>
+      <h2>A referencia szerint</h2>
+      <ul>
+        <li>Középen a portré, a név, alatta a kor, ha a user megadta.</li>
+        <li><strong>Level 12</strong>, a zöld kapszula a szinten belüli haladás: <strong>1250/1800</strong>.</li>
+        <li>Két kártya: tűz és streak, pipa és completed. Ez a régi stats kivonata.</li>
+        <li>Activity hőtérkép, alatta az achievements körikonokkal.</li>
+      </ul>
+      <div class="call">A fogaskerék: fiók, időzóna, értesítés, privát szféra, commitment, kijelentkezés. A barátok a Social tabon vannak.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>10 · Social</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="dayhead"><b>Social</b><span>Friends and pokes</span></div>
+          <div class="input" style="margin-bottom:10px">Username or invite link</div>
+          <div class="sec-label">Requests</div>
+          <div class="row friend">
+            <div class="ava" style="width:36px;height:36px;font-size:13px">JO</div>
+            <div class="mid"><div class="ttl">Jordan</div><div class="meta">Wants to connect</div></div>
+            <span class="poke">Accept</span>
+          </div>
+          <div class="sec-label" style="margin-top:12px">Friends</div>
+          <div class="list">
+            <div class="row friend"><div class="ava" style="width:36px;height:36px;font-size:13px;background:#171E1A;color:#B6FF70">AL</div><div class="mid"><div class="ttl">Alex</div><div class="meta">Done today</div></div><span class="poke off">Poke</span></div>
+            <div class="row friend"><div class="ava" style="width:36px;height:36px;font-size:13px;background:#171E1A;color:#FF6BB5">MA</div><div class="mid"><div class="ttl">Maya</div><div class="meta">2 left today</div></div><span class="poke">Poke</span></div>
+            <div class="row friend"><div class="ava" style="width:36px;height:36px;font-size:13px;background:#171E1A;color:#5EE0FF">SA</div><div class="mid"><div class="ttl">Sam</div><div class="meta">5 left · poked today</div></div><span class="poke off">Sent</span></div>
+          </div>
+          <p class="help">Friends see progress, not task names.</p>
+        </div>
+        <nav class="tabbar">
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Social · a Profile tab helye</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Social</h1>
+      <p>A navigációban a Profile helyén áll. Bökés biztatás, nem szégyenítés. Feladatcím, leírás és pénzbeli szabály nem látszik.</p>
+      <h2>Szabály</h2>
+      <ul>
+        <li>Poke csak elfogadott barátnak. Naponta egy küldő → egy fogadó.</li>
+        <li>A küldő 5 XP-t kap, ha a fogadó a bökés után, a helyi nap végéig az összes aznapi jogosult tételt készre jelöli, és volt legalább egy.</li>
+        <li>Ha a fogadó már a bökés előtt végzett, nincs jutalom. Alex ezért halk.</li>
+        <li>Sam ma már kapott bökést: a gomb <strong>Sent</strong>.</li>
+        <li>Ha nincs aznapi tétel, a poke lejár, XP nélkül.</li>
+        <li>A fogadó nem veszít XP-t, ha nem csinálja meg.</li>
+      </ul>
+      <div class="call">Visszajelzés a küldőnek, ha beérik: <strong>Your poke helped — +5 XP</strong>. Némítás a beállításokban.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>11 · Commitment</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="back"><svg class="i" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></svg> Commitment</div>
+          <div class="banner">Off until you review and confirm. No money moves in this build.</div>
+          <div class="kv"><span>Amount</span><b>2.00 EUR / missed task</b></div>
+          <div class="kv"><span>Destination</span><b>Charity · saved</b></div>
+          <div class="kv"><span>Eligible</span><b>Work tasks</b></div>
+          <div class="kv"><span>Cutoff</span><b>23:59 · Budapest</b></div>
+          <div class="dcard" style="margin-top:12px">
+            <div class="mid"><div class="ttl">At risk tonight</div><div class="meta">Finish project report is still open</div></div>
+            <span class="chip warn">2.00 EUR</span>
+          </div>
+          <ul class="help" style="padding-left:16px">
+            <li>Charged per missed task, not a flat fee.</li>
+            <li>You can pause before the cutoff.</li>
+            <li>A transfer is never shown as paid early.</li>
+          </ul>
+          <div class="lockline"><svg class="i sm" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Money transfer · unavailable</div>
+          <div class="btn">Enable calculation</div>
+          <div class="btn ghost">Keep off</div>
+        </div>
+      </div></div>
+      <p class="caption">Commitment · előnézet, utalás nélkül</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">Screen</p>
+      <h1>Commitment</h1>
+      <p>Alapból ki. Ez a megerősítő előnézet, nem egy fizetőképernyő.</p>
+      <h2>Amit a dizájnnak őriznie kell</h2>
+      <ul>
+        <li>Összeg, cél, jogosult kör, időzóna és cutoff a bekapcsolás előtt látszik.</li>
+        <li>A mai maximum külön sor: 1 nyitott Work task × 2 EUR = 2 EUR.</li>
+        <li>Három kihagyott tétel 6 EUR lenne. A képlet tételenkénti, nem átalány.</li>
+        <li>A gomb <strong>Enable calculation</strong>. Az utalás zárt sor, amíg nincs provider.</li>
+        <li>Siker csak provider-visszaigazolásra. Addig a státusz pending, failed vagy unavailable.</li>
+        <li>Nincs kártyamező, nincs banki belépés.</li>
+      </ul>
+      <div class="call">A settlement este fut, idempotensen. A UI nem indít pénzmozgást a task kipipálásakor.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>12 · States</span></div>
+  <div class="split">
+    <div class="stage">
+      <div class="device"><div class="screen">
+        <div class="status"><span>22:35</span><span class="sigs">●● LTE</span></div>
+        <div class="app">
+          <div class="topbar nolevel">
+            <div class="avatar-wrap"><div class="ava">MK</div><div class="lvl-badge">12</div></div>
+            <div class="streak-pill"><svg viewBox="0 0 24 24"><path fill="#FF9F43" d="M12.2 2.1c.3 2.8-.4 4.6-1.7 6.1 1.7-.2 3-1.5 3.6-2.8.8 2 .3 3.9-.6 5.3 1.9.1 3.6-.8 4.6-2.1.7 1.8.8 3.5.3 5.1A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.6-8.8c.9-2.1 2.4-3.6 3-5.5.3 1.7 1.4 3 2.6 3.6C10.4 8 10.8 5 12.2 2.1z"/></svg>6</div>
+            <div class="icon-btn"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg></div>
+          </div>
+          <p class="daymini">Today · Fri, Oct 16</p>
+          <div class="balance hero"><p class="n">−€0.00</p></div>
+          <div class="empty">
+            <div class="ring"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+            <b>Nothing due today</b>
+            <p>Add a habit or a task. A streak starts when you complete one.</p>
+          </div>
+          <div class="btn">+ Add task</div>
+        </div>
+        <nav class="tabbar">
+          <div class="tab on"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 6v1.3M12 16.7V18M6 12h1.3M16.7 12H18M8.2 8.2l.9.9M14.9 14.9l.9.9M15.8 8.2l-.9.9M9.1 14.9l-.9.9"/></svg><span>Today</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="13" rx="2"/><path d="M5 10.5h14M9 4.8v2.6M15 4.8v2.6"/></svg><span>Plan</span></div>
+          <div class="tab"><div class="fab"><svg class="i" viewBox="0 0 24 24" stroke="#10210A"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M8 20V11h3.2V20M12.8 20V7H16V20M5 20h14"/></svg><span>Leaderboard</span></div>
+          <div class="tab"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="2"/><circle cx="16" cy="9.2" r="1.5"/><path d="M4.6 18c.7-2.2 2.1-3.2 4.4-3.2s3.7 1 4.4 3.2M13.8 15.1c1.1-.4 2.2-.1 3 .9.6.9.8 1.6.8 2"/></svg><span>Social</span></div>
+        </nav>
+      </div></div>
+      <p class="caption">Üres Today · ugyanaz a felső sáv, szekciók nélkül</p>
+    </div>
+    <div class="notes">
+      <p class="kicker">States</p>
+      <h1>Üres, hiba, siker</h1>
+      <p>Minden fő képernyőn legyen üres állapot, és egyértelmű következő lépés. A gomb vagy csinál valamit, vagy nem látszik aktívnak.</p>
+      <h2>Toast</h2>
+      <ul>
+        <li>Siker, lime sáv: <strong>Task completed · +30 XP</strong></li>
+        <li>Szintlépés: <strong>Level 13</strong>, egyszer.</li>
+        <li>Poke jutalom: <strong>Your poke helped — +5 XP</strong></li>
+        <li>Hiba, narancs sáv: a lista visszaáll. Szöveg konkrét, nem „Something went wrong” egyedül.</li>
+      </ul>
+      <h2>Loading</h2>
+      <p>A sorok helyén 4–6 sötét, 52 magas, 16 sugarú blokk. A tab bar azonnal látszik. A Create gomb küldés közben ugyanaz a lime, belsejében egy nyugodt jel, a felirat helyén „Saving”.</p>
+      <h2>Űrlaphiba</h2>
+      <p>A Title kerete narancs, alatta: <strong>Add a title.</strong> Deadline-nál: <strong>Choose a due date.</strong> A begépelt szöveg megmarad.</p>
+      <div class="call">Három üres mondat, amit érdemes készre írni: üres hét a Planen, nincs deadline, új user a Statsban.</div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="top"><span><b>habit</b> · design reference</span><span>13 · Plan</span></div>
+  <div class="kicker">Build order</div>
+  <h1>Amit ebből meg lehet építeni</h1>
+  <p style="color:#D7E0DA; max-width:170mm">A repó üres, nincs kész stack. A sorrend a napi kör megbízhatóságát teszi előre. A díszítés és a pénzmozgás utána jön.</p>
+  <div class="split" style="grid-template-columns: 1.15fr 0.85fr; margin-top:4mm;">
+    <div class="phases">
+      <div class="phase"><div class="num">1</div><div><b>Shell és tokenek</b><span>5 tab, Create útvonal, üres állapotok, ez a színrendszer. Kész, ha a navigáció frissítés után is megmarad.</span></div></div>
+      <div class="phase"><div class="num">2</div><div><b>Today kör</b><span>Habit, task, deadline létrehozás. Készre jelölés, XP pontosan egyszer, reload után is megmarad.</span></div></div>
+      <div class="phase"><div class="num">3</div><div><b>Plan</b><span>Calendar és List. A mai deadline a Today Tasksban, piros kerettel. Days-left a user időzónájában.</span></div></div>
+      <div class="phase"><div class="num">4</div><div><b>Haladás</b><span>Profil, stats, hőtérkép, badge-ek. Egyetlen szintképlet: 500 XP / szint.</span></div></div>
+      <div class="phase"><div class="num">5</div><div><b>Barátok</b><span>Kérés, elfogadás, poke, 5 XP a dokumentált feltétellel. Napi egy bökés.</span></div></div>
+      <div class="phase"><div class="num">6</div><div><b>Commitment</b><span>Előnézet, számítás, auditnapló. Feature flag. Valódi utalás nincs.</span></div></div>
+      <div class="phase"><div class="num">7</div><div><b>Tesztek</b><span>XP, streak, poke, penalty idempotencia, időzóna-határ. A UI üres és hiba állapotai.</span></div></div>
+    </div>
+    <div>
+      <h2 style="margin-top:0">Rögzített döntések</h2>
+      <ul>
+        <li>Stack javaslat: Next.js, TypeScript, Tailwind, Drizzle, SQLite, Zod, Vitest.</li>
+        <li>Habit az MVP-ben csak Daily. A modell később bírja a hét napjait.</li>
+        <li>A Create nem kér XP-t. A jutalom a rendszeré, készre jelöléskor.</li>
+        <li>Poke: 5 XP, egy küldő egy fogadónak naponta.</li>
+        <li>Streak: legalább egy kész habit vagy task aznap. A nap a helyi éjfélkor zárul.</li>
+        <li>Undo nincs.</li>
+        <li>Értesítés az első demóban nem kötelező, de a típusok a modellben helyet kapnak.</li>
+      </ul>
+      <h2>Nem az első kör</h2>
+      <p>Hírfolyam, chat, csapat, AI-terv, shop, viselhető eszköz, valódi pénzmozgás.</p>
+      <div class="call">A domain logika ne a komponensben éljen: XP, occurrence, streak, poke, penalty külön, tesztelhető modul.</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
