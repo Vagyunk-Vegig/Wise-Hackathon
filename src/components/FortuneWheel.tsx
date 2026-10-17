@@ -1,153 +1,87 @@
-import { Animated, StyleSheet, Text, View } from "react-native";
-import Svg, { G, Path, Text as SvgText } from "react-native-svg";
-import { WHEEL_SLICE_ANGLE, WHEEL_SLICES } from "../wheel";
-import { colors } from "../theme";
-import { icons } from "./Icons";
-import { WHEEL_COOLDOWN_DAYS } from "../dates";
+import { useWindowDimensions, Animated, StyleSheet, Text, View } from "react-native";
+import { SvgXml } from "react-native-svg";
+import { wheelSvg } from "./wheelSvg";
 
-function polar(cx: number, cy: number, r: number, angle: number) {
-  const rad = (angle * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+const FRAME_W = 358;
+const FRAME_H = 360;
+const DISC = 334;
+
+const labels = [
+  { text: "ALL", color: "#C5F467", size: 19, left: 183.5, top: 64.07 },
+  { text: "50%", color: "#E1B482", size: 19, left: 236, top: 155 },
+  { text: "MISS", color: "#8E9FA6", size: 14, left: 183.5, top: 245.93 },
+  { text: "25%", color: "#9CCDDC", size: 19, left: 78.5, top: 245.93 },
+  { text: "50%", color: "#D9A6C5", size: 19, left: 26, top: 155 },
+  { text: "MISS", color: "#8E9FA6", size: 14, left: 78.5, top: 64.07 },
+];
+
+const slices = [
+  { key: "slice-0", left: 158, top: 0, width: 136.832, height: 158 },
+  { key: "slice-1", left: 158, top: 79, width: 158, height: 158 },
+  { key: "slice-2", left: 158, top: 158, width: 136.832, height: 158 },
+  { key: "slice-3", left: 21.172, top: 158, width: 136.832, height: 158 },
+  { key: "slice-4", left: 0, top: 79, width: 158, height: 158 },
+  { key: "slice-5", left: 21.172, top: 0, width: 136.832, height: 158 },
+] as const;
+
+function Art({ name, width, height }: { name: keyof typeof wheelSvg; width: number; height: number }) {
+  return <SvgXml xml={wheelSvg[name]} width={width} height={height} />;
 }
 
-function slicePath(cx: number, cy: number, r: number, start: number, end: number) {
-  const from = polar(cx, cy, r, start);
-  const to = polar(cx, cy, r, end);
-  const large = end - start > 180 ? 1 : 0;
-  return `M ${cx} ${cy} L ${from.x} ${from.y} A ${r} ${r} 0 ${large} 1 ${to.x} ${to.y} Z`;
-}
-
-export function FortuneWheel({
-  size,
-  rotation,
-  locked = false,
-  daysLeft = 0,
-  unlockLabel,
-}: {
-  size: number;
-  rotation: Animated.Value;
-  locked?: boolean;
-  daysLeft?: number;
-  unlockLabel?: string;
-}) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - 6;
-  const hub = Math.round(size * 0.16);
-  const remaining = Math.max(0, Math.min(WHEEL_COOLDOWN_DAYS, daysLeft));
+export function FortuneWheel({ rotation }: { rotation: Animated.Value }) {
+  const { width } = useWindowDimensions();
+  const scale = Math.min(1, (width - 32) / FRAME_W);
+  const spin = rotation.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] });
 
   return (
-    <View style={{ width: size, height: size }}>
-      <View style={[styles.pointer, { borderTopColor: locked ? colors.muted : colors.accent }]} />
-      <Animated.View
-        style={{
-          width: size,
-          height: size,
-          opacity: locked ? 0.22 : 1,
-          transform: [{ rotate: rotation.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] }) }],
-        }}
-      >
-        <Svg width={size} height={size}>
-          {WHEEL_SLICES.map((slice, index) => {
-            const start = -90 + index * WHEEL_SLICE_ANGLE;
-            const end = start + WHEEL_SLICE_ANGLE;
-            const mid = start + WHEEL_SLICE_ANGLE / 2;
-            const label = polar(cx, cy, r * 0.62, mid);
-            return (
-              <G key={slice.id}>
-                <Path d={slicePath(cx, cy, r, start, end)} fill={slice.color} stroke={colors.bg} strokeWidth={2} />
-                <SvgText
-                  x={label.x}
-                  y={label.y}
-                  fill={slice.text}
-                  fontSize={13}
-                  fontWeight="700"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                  transform={`rotate(${mid + 90}, ${label.x}, ${label.y})`}
-                >
-                  {slice.label}
-                </SvgText>
-              </G>
-            );
-          })}
-        </Svg>
-      </Animated.View>
-      {locked ? (
-        <View style={[styles.lockLayer, { width: size, height: size, borderRadius: size / 2 }]} pointerEvents="none">
-          <View style={styles.lockCard}>
-            <View style={styles.lockRing}>
-              <icons.LockKeyhole size={28} color={colors.accent} />
-            </View>
-            <Text style={styles.lockTitle}>Locked</Text>
-            <Text style={styles.lockDays}>
-              {remaining === 1 ? "1 day left" : `${remaining} days left`}
-            </Text>
-            <View style={styles.pips}>
-              {Array.from({ length: WHEEL_COOLDOWN_DAYS }, (_, index) => (
-                <View key={index} style={[styles.pip, index < remaining ? styles.pipOn : styles.pipOff]} />
-              ))}
-            </View>
-            {unlockLabel ? <Text style={styles.lockDate}>Opens {unlockLabel}</Text> : null}
+    <View style={{ width: FRAME_W * scale, height: FRAME_H * scale, alignSelf: "center" }}>
+      <View style={[styles.frame, { transform: [{ scale }], transformOrigin: "top left" }]}>
+        <Animated.View style={[styles.disc, { transform: [{ rotate: spin }] }]}>
+          <View style={styles.rimOuter}>
+            <Art name="rim-outer" width={334} height={334} />
           </View>
+          <View style={styles.rimInner}>
+            <Art name="rim-inner" width={322} height={322} />
+          </View>
+          <View style={styles.slices}>
+            {slices.map((slice) => (
+              <View key={slice.key} style={{ position: "absolute", left: slice.left, top: slice.top, width: slice.width, height: slice.height }}>
+                <Art name={slice.key} width={slice.width} height={slice.height} />
+              </View>
+            ))}
+          </View>
+          {labels.map((label) => (
+            <Text key={`${label.text}-${label.left}`} style={[styles.label, { color: label.color, fontSize: label.size, left: label.left, top: label.top }]}>
+              {label.text}
+            </Text>
+          ))}
+          <View style={styles.hubRim}>
+            <Art name="hub-rim" width={66} height={66} />
+          </View>
+          <View style={styles.hub}>
+            <Art name="hub" width={52} height={52} />
+          </View>
+          <View style={styles.spark}>
+            <Art name="spark" width={20} height={20} />
+          </View>
+        </Animated.View>
+        <View style={styles.pointer}>
+          <Art name="pointer" width={24} height={32} />
         </View>
-      ) : (
-        <View style={[styles.hub, { width: hub, height: hub, borderRadius: hub / 2, left: (size - hub) / 2, top: (size - hub) / 2 }]} />
-      )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pointer: {
-    position: "absolute",
-    top: 6,
-    left: "50%",
-    marginLeft: -10,
-    zIndex: 4,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 18,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
-  hub: {
-    position: "absolute",
-    backgroundColor: colors.bg,
-    borderWidth: 3,
-    borderColor: colors.accent,
-    zIndex: 2,
-  },
-  lockLayer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(8,13,11,0.55)",
-    borderWidth: 1.5,
-    borderColor: "rgba(182,255,112,0.28)",
-    zIndex: 3,
-  },
-  lockCard: { alignItems: "center", gap: 8, paddingHorizontal: 24 },
-  lockRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.elevated,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  lockTitle: { color: colors.text, fontSize: 20, fontWeight: "800", letterSpacing: 0.4 },
-  lockDays: { color: colors.accent, fontSize: 15, fontWeight: "700" },
-  lockDate: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
-  pips: { flexDirection: "row", gap: 6, marginTop: 4, marginBottom: 2 },
-  pip: { width: 8, height: 8, borderRadius: 4 },
-  pipOn: { backgroundColor: colors.accent },
-  pipOff: { backgroundColor: colors.track, borderWidth: 1, borderColor: colors.border },
+  frame: { width: FRAME_W, height: FRAME_H },
+  disc: { position: "absolute", left: 12, top: 18, width: DISC, height: DISC },
+  rimOuter: { position: "absolute", left: 0, top: 0, width: 334, height: 334 },
+  rimInner: { position: "absolute", left: 6, top: 6, width: 322, height: 322 },
+  slices: { position: "absolute", left: 9, top: 9, width: 316, height: 316 },
+  label: { position: "absolute", width: 72, height: 24, lineHeight: 24, textAlign: "center", fontWeight: "700" },
+  hubRim: { position: "absolute", left: 134, top: 134, width: 66, height: 66 },
+  hub: { position: "absolute", left: 141, top: 141, width: 52, height: 52 },
+  spark: { position: "absolute", left: 157, top: 157, width: 20, height: 20 },
+  pointer: { position: "absolute", left: 167, top: 8, width: 24, height: 32, zIndex: 2 },
 });

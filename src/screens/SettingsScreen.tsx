@@ -9,9 +9,7 @@ import type { RootStackParamList } from "../routes";
 
 const rows = [
   { key: "account", label: "Account", Icon: icons.UserRound },
-  { key: "zone", label: "Time zone", Icon: icons.Globe },
   { key: "notes", label: "Notifications", Icon: icons.Bell },
-  { key: "privacy", label: "Privacy", Icon: icons.Shield },
   { key: "commitment", label: "Commitment", Icon: icons.HandHeart },
   { key: "wheel", label: "Weekly wheel", Icon: icons.Gift },
   { key: "logout", label: "Log out", Icon: icons.LogOut },

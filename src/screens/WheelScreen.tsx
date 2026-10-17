@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { SvgXml } from "react-native-svg";
 import { FortuneWheel } from "../components/FortuneWheel";
+import { wheelSvg } from "../components/wheelSvg";
 import { icons } from "../components/Icons";
-import { PageHeader, PrimaryButton, Screen } from "../components/ui";
+import { IconButton, Screen } from "../components/ui";
 import { ftLabel, shortDate } from "../dates";
 import { colors } from "../theme";
 import { useStore } from "../store";
-import { prizeCopy, restRotationForSlice, sliceIndexForPrize, spinRotationForSlice, WHEEL_SLICES } from "../wheel";
+import { restRotationForSlice, sliceIndexForPrize, spinRotationForSlice } from "../wheel";
 import type { RootStackParamList } from "../routes";
 
 export function WheelScreen() {
@@ -18,8 +20,6 @@ export function WheelScreen() {
   const [busy, setBusy] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const result = wheelThisWeek;
-  const locked = Boolean(result) && !canSpinWheel && !busy;
-  const unlockLabel = shortDate(nextWheelDate);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -45,123 +45,86 @@ export function WheelScreen() {
     }).start(() => setBusy(false));
   };
 
+  const recharge =
+    result == null
+      ? "You can spin only if yesterday had lost Ft."
+      : wheelDaysLeft === 1
+        ? `Recharges tomorrow · ${shortDate(nextWheelDate)}`
+        : `Recharges in ${wheelDaysLeft} days · ${shortDate(nextWheelDate)}`;
+
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.body}>
-        <PageHeader title="Weekly wheel" onBack={() => navigation.goBack()} />
-        <Text style={styles.lead}>
-          One spin every 7 days. Land on a slice to recover some or all of yesterday's missed-task penalty.
-        </Text>
-        <View style={styles.stats}>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>Yesterday lost</Text>
-            <Text style={styles.statValue}>{ftLabel(yesterdayLostFt)}</Text>
+        <IconButton onPress={() => navigation.goBack()}>
+          <icons.ChevronLeft size={18} color={colors.text} />
+        </IconButton>
+        <View style={styles.intro}>
+          <Text style={styles.title}>Fortune wheel</Text>
+          <Text style={styles.lead}>Spin for your reward.</Text>
+        </View>
+        <View style={styles.amounts}>
+          <View style={styles.amount} accessibilityLabel={`Yesterday lost ${ftLabel(yesterdayLostFt)}`}>
+            <Text style={styles.amountText}>{ftLabel(yesterdayLostFt)}</Text>
           </View>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>Recovered</Text>
-            <Text style={[styles.statValue, { color: colors.accent }]}>{ftLabel(result?.recoveredFt ?? 0)}</Text>
+          <View style={styles.amount} accessibilityLabel={`Recovered ${ftLabel(result?.recoveredFt ?? 0)}`}>
+            <Text style={styles.amountText}>{ftLabel(result?.recoveredFt ?? 0)}</Text>
           </View>
         </View>
-        <View style={styles.wheelWrap}>
-          <FortuneWheel size={300} rotation={rotation} locked={locked} daysLeft={wheelDaysLeft} unlockLabel={unlockLabel} />
+        <View style={styles.stage}>
+          <FortuneWheel rotation={rotation} />
+          {canSpinWheel || busy ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Spin" onPress={spin} disabled={busy} style={[styles.spin, busy && { opacity: 0.7 }]}>
+              <SvgXml xml={wheelSvg.rotate} width={18} height={18} />
+              <Text style={styles.spinText}>{busy ? "Spinning…" : "Spin"}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.locked}>
+              <Text style={styles.lockedText}>{recharge}</Text>
+            </View>
+          )}
         </View>
-        {canSpinWheel || busy ? (
-          <PrimaryButton label={busy ? "Spinning…" : "Spin"} onPress={spin} disabled={busy} />
-        ) : (
-          <View style={styles.lockedBar}>
-            <View style={styles.lockedIcon}>
-              <icons.LockKeyhole size={18} color={colors.accent} />
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              {result ? (
-                <>
-                  <Text style={styles.lockedTitle}>
-                    {wheelDaysLeft === 1 ? "Recharges tomorrow" : `Recharges in ${wheelDaysLeft} days`}
-                  </Text>
-                  <Text style={styles.lockedBody}>Next spin {unlockLabel}</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.lockedTitle}>Nothing to recover</Text>
-                  <Text style={styles.lockedBody}>You can spin only if yesterday had lost Ft.</Text>
-                </>
-              )}
-            </View>
-          </View>
-        )}
-        {result ? (
-          <View style={styles.result}>
-            <icons.Sparkles size={18} color={colors.accent} />
-            <Text style={styles.resultTitle}>
-              {result.share > 0 && result.recoveredFt > 0 ? `+${ftLabel(result.recoveredFt)}` : WHEEL_SLICES[sliceIndexForPrize(result.prizeId)]?.label ?? "MISS"}
-            </Text>
-            <Text style={styles.resultBody}>{prizeCopy(result.share, result.recoveredFt, result.lostFt)}</Text>
-          </View>
-        ) : (
-          <View style={styles.note}>
-            <icons.Gift size={16} color={colors.muted} />
-            <Text style={styles.noteText}>
-              {yesterdayLostFt > 0
-                ? `Yesterday's unfinished money tasks add up to ${ftLabel(yesterdayLostFt)}.`
-                : "Finish today's tasks so a miss tomorrow can still be recovered on the next spin."}
-            </Text>
-          </View>
-        )}
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { padding: 16, paddingBottom: 40, gap: 20 },
-  lead: { color: colors.secondary, fontSize: 14, lineHeight: 21, marginTop: -8 },
-  stats: { flexDirection: "row", gap: 10 },
-  stat: {
+  body: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 24 },
+  intro: { gap: 8 },
+  title: { color: "#F3F7F8", fontSize: 27, fontWeight: "700", lineHeight: 32 },
+  lead: { color: "#A6B4B9", fontSize: 14, lineHeight: 21 },
+  amounts: { flexDirection: "row", gap: 12 },
+  amount: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: 14,
-    gap: 6,
-  },
-  statLabel: { color: colors.muted, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase" },
-  statValue: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  wheelWrap: { alignItems: "center", paddingVertical: 12 },
-  lockedBar: {
-    height: 56,
+    height: 72,
     borderRadius: 14,
-    backgroundColor: colors.elevated,
+    backgroundColor: "#121B1E",
     borderWidth: 1,
-    borderColor: "rgba(182,255,112,0.28)",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 14,
-  },
-  lockedIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    alignItems: "center",
+    borderColor: "#29363A",
+    paddingHorizontal: 16,
     justifyContent: "center",
   },
-  lockedTitle: { color: colors.text, fontSize: 14, fontWeight: "700" },
-  lockedBody: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
-  result: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
+  amountText: { color: "#F3F7F8", fontSize: 26, fontWeight: "700" },
+  stage: { gap: 16 },
+  spin: {
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#C5F467",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
-  resultTitle: { color: colors.text, fontSize: 20, fontWeight: "800" },
-  resultBody: { color: colors.secondary, fontSize: 13, lineHeight: 20, textAlign: "center" },
-  note: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 4 },
-  noteText: { flex: 1, color: colors.secondary, fontSize: 13, lineHeight: 20 },
+  spinText: { color: "#19250C", fontSize: 15, fontWeight: "700" },
+  locked: {
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#121B1E",
+    borderWidth: 1,
+    borderColor: "#29363A",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  lockedText: { color: "#A6B4B9", fontSize: 14, fontWeight: "700", textAlign: "center" },
 });

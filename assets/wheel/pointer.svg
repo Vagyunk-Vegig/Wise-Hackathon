@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="Mutat&#195;&#179;">
+<use xlink:href="#stroke0_0_13" fill="#C5F467"/>
+<mask id="stroke1_0_13" fill="white">
+<use xlink:href="#stroke0_0_13"/>
+</mask>
+<path d="M4.47761 0H19.5224C23.1045 0 24.5373 2.03175 23.8209 6.09524L15.2239 28.4444C13.0746 33.1852 10.9254 33.1852 8.77612 28.4444L0.179104 6.09524C-0.537313 2.03175 0.895522 0 4.47761 0Z" stroke-width="4" stroke="#090E10" mask="url(#stroke1_0_13)"/>
+</g>
+<defs>
+<path id="stroke0_0_13" d="M4.47761 0H19.5224C23.1045 0 24.5373 2.03175 23.8209 6.09524L15.2239 28.4444C13.0746 33.1852 10.9254 33.1852 8.77612 28.4444L0.179104 6.09524C-0.537313 2.03175 0.895522 0 4.47761 0Z"/>
+</defs>
+</svg>

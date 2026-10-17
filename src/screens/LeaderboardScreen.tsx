@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { icons } from "../components/Icons";
 import { AvatarMark, Screen, SecondaryButton, TopBar } from "../components/ui";
@@ -13,6 +13,7 @@ export function LeaderboardScreen() {
   const rows = [...users]
     .sort((a, b) => b.streak - a.streak || b.xp - a.xp)
     .map((user, index) => ({
+      id: user.id,
       rank: index + 1,
       name: user.id === currentUser?.id ? "You" : user.username,
       initials: user.initials,
@@ -40,13 +41,19 @@ export function LeaderboardScreen() {
         ) : (
           <View style={{ gap: 8 }}>
             {rows.map((row) => (
-              <View key={row.rank} style={[styles.row, row.you && styles.you]}>
+              <Pressable
+                key={row.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${row.name} profile`}
+                onPress={() => root.navigate("Profile", { userId: row.id })}
+                style={({ pressed }) => [styles.row, row.you && styles.you, pressed && { opacity: 0.72 }]}
+              >
                 <Text style={[styles.rank, row.rank === 1 && { color: colors.accent }]}>{row.rank}</Text>
                 <AvatarMark icon={row.icon} initials={row.initials} size={36} textColor={row.you ? colors.onAccent : row.color} background={row.you ? colors.accent : colors.elevated} />
                 <Text style={styles.name}>{row.name}</Text>
                 <icons.Flame size={16} color={colors.streak} fill={colors.streak} />
                 <Text style={styles.streak}>{row.streak}</Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
