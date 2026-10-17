@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking } from "react-native";
-import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveTaskNote, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
@@ -92,7 +92,7 @@ type TaskRow = {
   task_type: string;
 };
 
-type NewItem = Omit<Item, "id" | "done" | "doneDates"> & { description?: string };
+type NewItem = Omit<Item, "id" | "done" | "doneDates" | "note"> & { description?: string };
 
 type Store = {
   items: Item[];
@@ -113,6 +113,7 @@ type Store = {
   toast: ToastMessage | null;
   completeItem: (id: string, date: string) => void;
   addItem: (item: NewItem) => Promise<void>;
+  updateItemNote: (id: string, note: string) => Promise<void>;
   acceptRequest: (id: string) => void;
   sendRequest: (id: string) => Promise<void>;
   poke: (id: string) => void;
@@ -427,6 +428,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
         rows.current.set(String(row.id), row);
         setItems((current) => [rowToItem(row), ...current]);
+      },
+      updateItemNote: async (id, note) => {
+        const row = rows.current.get(id);
+        if (!row) throw new Error("This task is no longer available.");
+        const next = note.trim();
+        const saved = await saveTaskNote(row, next);
+        rows.current.set(id, saved);
+        setItems((current) => current.map((entry) => (entry.id === id ? { ...entry, note: next } : entry)));
       },
       acceptRequest: (id) => {
         const person = requests.find((entry) => entry.id === id);

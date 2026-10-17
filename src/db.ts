@@ -179,6 +179,7 @@ export function rowToItem(row: TaskRow): Item {
     date: meta.date,
     done: meta.done,
     doneDates: meta.doneDates,
+    note: meta.note,
   };
 }
 
@@ -413,6 +414,14 @@ export async function saveTaskDone(row: TaskRow, done: boolean, occurrenceDate?:
       ? { ...meta, doneDates: meta.doneDates.includes(occurrenceDate) ? meta.doneDates : [...meta.doneDates, occurrenceDate] }
       : { ...meta, done };
   const description = encodeMeta(next);
+  const { error } = await supabase.from("task").update({ description }).eq("id", row.id);
+  if (error) throw new Error(error.message);
+  return { ...row, description };
+}
+
+export async function saveTaskNote(row: TaskRow, note: string) {
+  const meta = decodeMeta(row.description, row.task_type, row.category);
+  const description = encodeMeta({ ...meta, note });
   const { error } = await supabase.from("task").update({ description }).eq("id", row.id);
   if (error) throw new Error(error.message);
   return { ...row, description };

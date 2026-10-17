@@ -6,6 +6,7 @@ import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
 import { XP_PER_LEVEL } from "../sample";
+import { useRootNav } from "../routes";
 import { useStore } from "../store";
 
 export function Screen({ children }: { children: ReactNode }) {
@@ -78,6 +79,7 @@ export function SectionLabel({ title, count }: { title: string; count?: string }
 }
 
 export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onToggle?: () => void; showCheck?: boolean }) {
+  const root = useRootNav();
   const meta = categoryMeta[item.category];
   const goal = item.kind === "goal";
   const deadline = item.kind === "deadline";
@@ -86,20 +88,27 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
   return (
     <View style={[styles.row, dim && { opacity: 0.48 }]}>
       {goal ? <View style={[styles.stripe, { backgroundColor: item.done ? colors.accent : colors.goalOpen }]} /> : null}
-      {!deadline || item.category ? (
-        <View style={[styles.tile, { backgroundColor: `${meta.color}17` }, goal && contentDim && { opacity: 0.48 }]}>
-          <meta.Icon size={17} color={meta.color} />
-        </View>
-      ) : null}
-      <Text style={[styles.rowTitle, goal && contentDim && { opacity: 0.48 }]} numberOfLines={1}>
-        {item.title}
-      </Text>
-      {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
-      {item.money && !deadline ? (
-        <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
-          <Text style={styles.euroText}>Ft</Text>
-        </View>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+        onPress={() => root.navigate("TaskDetail", { id: item.id, date: item.date })}
+        style={styles.rowMain}
+      >
+        {!deadline || item.category ? (
+          <View style={[styles.tile, { backgroundColor: `${meta.color}17` }, goal && contentDim && { opacity: 0.48 }]}>
+            <meta.Icon size={17} color={meta.color} />
+          </View>
+        ) : null}
+        <Text style={[styles.rowTitle, goal && contentDim && { opacity: 0.48 }]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
+        {item.money && !deadline ? (
+          <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
+            <Text style={styles.euroText}>Ft</Text>
+          </View>
+        ) : null}
+      </Pressable>
       {deadline ? (
         <View style={[styles.chip, dueChip(item.date) === "Due today" ? styles.chipHot : dueChip(item.date) === "Overdue" ? styles.chipBad : styles.chipSoon]}>
           <Text style={[styles.chipText, dueChip(item.date) === "Due today" ? { color: colors.due } : dueChip(item.date) === "Overdue" ? { color: "#FF8ABF" } : { color: colors.accent }]}>
@@ -107,7 +116,7 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
           </Text>
         </View>
       ) : showCheck ? (
-        <Pressable onPress={onToggle} disabled={item.done} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Mark ${item.title} done`} onPress={onToggle} disabled={item.done} hitSlop={8}>
           <View style={[styles.check, item.done && styles.checkOn]}>
             {item.done ? <icons.Check size={14} color={colors.onAccent} strokeWidth={3} /> : null}
           </View>
@@ -205,9 +214,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 10,
+    paddingRight: 10,
     overflow: "hidden",
   },
+  rowMain: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 10 },
   stripe: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
   tile: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   rowTitle: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "600" },
