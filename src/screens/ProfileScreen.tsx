@@ -22,7 +22,9 @@ export function ProfileScreen() {
   const { currentUser, totalXp, streak, items } = useStore();
   const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
   const into = totalXp % XP_PER_LEVEL;
-  const completed = currentUser ? items.filter((item) => item.done).length : 0;
+  const completed = currentUser
+    ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
+    : 0;
   const name = currentUser?.username ?? "No profile";
   const badgeList = (currentUser?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));

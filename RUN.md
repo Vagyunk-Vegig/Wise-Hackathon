@@ -21,7 +21,7 @@ Megnyílik a `http://localhost:8081` címen. A képernyő 430 px széles oszlopb
 Android Studio, SDK és JDK 17 kell. Emulátor vagy USB-n hibakeresésre engedélyezett telefon.
 
 ```bash
-npm run android
+npm run android 
 ```
 
 Az első futás legenerálja az `android` mappát, lefordítja a debug APK-t, és telepíti a csatlakoztatott készülékre. Ha több eszköz van, Expo megkérdezi, melyikre menjen.

@@ -88,7 +88,7 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
         {item.title}
       </Text>
       {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
-      {item.money ? (
+      {item.money && !deadline ? (
         <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
           <Text style={styles.euroText}>Ft</Text>
         </View>

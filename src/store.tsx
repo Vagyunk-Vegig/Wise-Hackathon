@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { TODAY } from "./dates";
 import { bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
@@ -24,7 +25,7 @@ type TaskRow = {
   task_type: string;
 };
 
-type NewItem = Omit<Item, "id" | "done"> & { description?: string };
+type NewItem = Omit<Item, "id" | "done" | "doneDates"> & { description?: string };
 
 type Store = {
   items: Item[];
@@ -38,7 +39,7 @@ type Store = {
   authReady: boolean;
   commitmentOn: boolean;
   toast: ToastMessage | null;
-  completeItem: (id: string) => void;
+  completeItem: (id: string, date: string) => void;
   addItem: (item: NewItem) => Promise<void>;
   acceptRequest: (id: string) => void;
   poke: (id: string) => void;
@@ -173,25 +174,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       showToast,
       dismissToast: () => setToast(null),
       setCommitment,
-      completeItem: (id) => {
+      completeItem: (id, date) => {
         const row = rows.current.get(id);
         const item = items.find((entry) => entry.id === id);
-        if (!row || !item || item.done || item.kind === "deadline") return;
+        if (!row || !item || item.kind === "deadline") return;
+        const habitDone = item.doneDates.includes(date) || (item.done && item.date === date && item.doneDates.length === 0);
+        if (item.kind === "habit" && (date > TODAY || habitDone)) return;
+        if (item.kind !== "habit" && item.done) return;
         const baseXp = currentUser?.xp ?? 0;
         const nextXp = baseXp + item.xp;
         const previousLevel = Math.floor(baseXp / XP_PER_LEVEL) + 1;
         const nextLevel = Math.floor(nextXp / XP_PER_LEVEL) + 1;
-        const streakUpdate = bumpStreak(currentUser?.streaks, item.date);
-        setItems((current) => current.map((entry) => (entry.id === id ? { ...entry, done: true } : entry)));
+        const streakUpdate = bumpStreak(currentUser?.streaks, date);
+        setItems((current) =>
+          current.map((entry) => {
+            if (entry.id !== id) return entry;
+            if (entry.kind === "habit") {
+              if (entry.doneDates.includes(date)) return entry;
+              return { ...entry, doneDates: [...entry.doneDates, date] };
+            }
+            return { ...entry, done: true };
+          }),
+        );
         if (currentUser) {
           setUsers((current) =>
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
         }
-        void saveTaskDone(row, true)
-          .then(() => {
-            const meta = row.description;
-            rows.current.set(id, { ...row, description: meta });
+        void saveTaskDone(row, true, item.kind === "habit" ? date : undefined)
+          .then((saved) => {
+            rows.current.set(id, saved);
           })
           .catch((error: unknown) => showToast(error instanceof Error ? error.message : "Could not save task", "error", "alert"));
         if (currentUser) {
@@ -200,7 +212,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           });
         }
         if (nextLevel > previousLevel) showToast(`Level ${nextLevel}`, "success", "sparkles");
-        else showToast(`Task completed · +${item.xp} XP`);
+        else showToast(`${item.kind === "habit" ? "Habit" : "Task"} completed · +${item.xp} XP`);
       },
       addItem: async (item) => {
         if (!currentUser) throw new Error("Sign in first.");
