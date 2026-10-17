@@ -1,44 +1,87 @@
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { icons } from "../components/Icons";
-import { Screen, SectionLabel } from "../components/ui";
+import { Screen, SectionLabel, TopBar } from "../components/ui";
+import { toPerson } from "../db";
+import { searchByUsername } from "../search";
 import { colors } from "../theme";
+import { useRootNav } from "../routes";
 import { useStore } from "../store";
 import type { Person } from "../types";
 
 export function SocialScreen() {
-  const { requests, friends, acceptRequest, poke } = useStore();
+  const root = useRootNav();
+  const { requests, friends, outgoing, users, currentUser, streak, totalXp, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke } = useStore();
+  const progress = (totalXp % 500) / 500;
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => searchByUsername(users, query, currentUser?.id).map(toPerson), [users, query, currentUser?.id]);
+  const searching = query.trim().length > 0;
+
+  const searchAction = (id: string) => {
+    if (friends.some((person) => person.id === id)) return { action: "Friends", disabled: true, onPress: undefined };
+    if (requests.some((person) => person.id === id)) return { action: "Accept", disabled: false, onPress: () => acceptRequest(id) };
+    if (outgoing.includes(id)) return { action: "Sent", disabled: true, onPress: undefined };
+    return { action: "Add", disabled: false, onPress: () => void sendRequest(id) };
+  };
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.body}>
+      <TopBar progress={progress} streak={streak} onAvatar={() => root.navigate("Profile")} onSettings={() => root.navigate("Settings")} />
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View>
           <Text style={styles.title}>Social</Text>
           <Text style={styles.sub}>Friends and pokes</Text>
         </View>
+        {pokeNotice ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss poke reward" onPress={dismissPokeNotice} style={styles.notice}>
+            <icons.Bell size={16} color={colors.accent} />
+            <Text style={styles.noticeText}>{pokeNotice}</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.search}>
           <icons.Search size={17} color={colors.muted} />
-          <TextInput placeholder="Username or invite link" placeholderTextColor={colors.muted} style={styles.input} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="Search by username"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+          />
         </View>
-        {requests.length > 0 ? (
+        {searching ? (
           <View style={{ gap: 8 }}>
-            <SectionLabel title="REQUESTS" />
-            {requests.map((person) => (
-              <PersonRow key={person.id} person={person} action="Accept" onPress={() => acceptRequest(person.id)} />
-            ))}
+            <SectionLabel title="PEOPLE" />
+            {matches.length === 0 ? <Text style={styles.meta}>No users match that name.</Text> : null}
+            {matches.map((person) => {
+              const action = searchAction(person.id);
+              return <PersonRow key={person.id} person={person} action={action.action} disabled={action.disabled} onPress={action.onPress} />;
+            })}
           </View>
         ) : null}
         <View style={{ gap: 8 }}>
+          <SectionLabel title="REQUESTS" />
+          {requests.length === 0 ? <Text style={styles.meta}>No friend requests.</Text> : null}
+          {requests.map((person) => (
+            <PersonRow key={person.id} person={person} action="Accept" onPress={() => acceptRequest(person.id)} />
+          ))}
+        </View>
+        <View style={{ gap: 8 }}>
           <SectionLabel title="FRIENDS" />
           {friends.length === 0 ? <Text style={styles.meta}>No friends yet.</Text> : null}
-          {friends.map((person) => (
-            <PersonRow
-              key={person.id}
-              person={person}
-              action={person.poke === "sent" ? "Sent" : "Poke"}
-              disabled={person.poke !== "poke"}
-              onPress={() => poke(person.id)}
-            />
-          ))}
+          {friends.map((person) => {
+            const tasks = dailyTasks[person.id] ?? { done: 0, total: 0 };
+            return (
+              <PersonRow
+                key={person.id}
+                person={{ ...person, meta: tasks.total === 0 ? "No tasks today" : `${tasks.done}/${tasks.total}` }}
+                action={person.poke === "sent" ? "Sent" : "Poke"}
+                disabled={person.poke !== "poke"}
+                onPress={() => poke(person.id)}
+              />
+            );
+          })}
         </View>
         <View style={styles.note}>
           <icons.LockKeyhole size={13} color={colors.muted} />
@@ -49,35 +92,43 @@ export function SocialScreen() {
   );
 }
 
-function PersonRow({ person, action, disabled, onPress }: { person: Person; action: string; disabled?: boolean; onPress: () => void }) {
+function PersonRow({ person, action, disabled, onPress }: { person: Person; action?: string; disabled?: boolean; onPress?: () => void }) {
+  const root = useRootNav();
   return (
     <View style={styles.row}>
-      <View style={styles.avatar}>
-        <Text style={[styles.initials, { color: person.color }]}>{person.initials}</Text>
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={styles.name}>{person.name}</Text>
-        <Text style={styles.meta}>{person.meta}</Text>
-      </View>
-      <Pressable onPress={onPress} disabled={disabled} style={[styles.pill, disabled && styles.pillOff]}>
-        <Text style={[styles.pillText, disabled && { color: colors.placeholder }]}>{action}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${person.name} profile`} onPress={() => root.navigate("Profile", { userId: person.id })} style={styles.person}>
+        <View style={styles.avatar}>
+          <Text style={[styles.initials, { color: person.color }]}>{person.initials}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={styles.name}>{person.name}</Text>
+          <Text style={styles.meta}>{person.meta}</Text>
+        </View>
       </Pressable>
+      {action ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={action} onPress={onPress} disabled={disabled} style={[styles.pill, disabled && styles.pillOff]}>
+          <Text style={[styles.pillText, disabled && { color: colors.placeholder }]}>{action}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { padding: 16, paddingTop: 16, gap: 24 },
+  body: { padding: 16, paddingTop: 24, gap: 24 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   sub: { color: colors.secondary, fontSize: 12, marginTop: 4 },
+  notice: { borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  noticeText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" },
   search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
   input: { flex: 1, color: colors.text, fontSize: 13 },
   row: { height: 72, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12 },
+  person: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center" },
   initials: { fontSize: 12, fontWeight: "800" },
   name: { color: colors.text, fontSize: 14, fontWeight: "700" },
   meta: { color: colors.secondary, fontSize: 11 },
-  pill: { width: 68, height: 32, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  pill: { minWidth: 68, height: 32, borderRadius: 999, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   pillOff: { backgroundColor: colors.elevated },
   pillText: { color: colors.onAccent, fontSize: 12, fontWeight: "700" },
   note: { flexDirection: "row", gap: 8 },

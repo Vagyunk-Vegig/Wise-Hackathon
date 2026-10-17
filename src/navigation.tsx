@@ -48,6 +48,7 @@ function PlanNavigator() {
 function AppTabs({ state, navigation }: { state: { index: number; routes: { name: string }[] }; navigation: { navigate: (name: string, params?: object) => void } }) {
   const insets = useSafeAreaInsets();
   const root = useRootNav();
+  const { pokeNotice } = useStore();
   const active = state.routes[state.index]?.name;
   const items = [
     { name: "Today", label: "Today", Icon: icons.Sun },
@@ -76,7 +77,10 @@ function AppTabs({ state, navigation }: { state: { index: number; routes: { name
             style={styles.slot}
             onPress={() => navigation.navigate(item.name, item.name === "Plan" ? { screen: "PlanHome" } : undefined)}
           >
-            <item.Icon size={20} color={on ? colors.accent : colors.muted} />
+            <View>
+              <item.Icon size={20} color={on ? colors.accent : colors.muted} />
+              {item.name === "Social" && pokeNotice ? <View style={styles.dot} /> : null}
+            </View>
             <Text style={[styles.label, on && { color: colors.accent }]}>{item.label}</Text>
           </Pressable>
         );
@@ -133,4 +137,5 @@ const styles = StyleSheet.create({
   slot: { flex: 1, height: 58, alignItems: "center", justifyContent: "center", gap: 5 },
   label: { color: colors.muted, fontSize: 8, fontWeight: "700" },
   fab: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  dot: { position: "absolute", top: -2, right: -6, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
 });

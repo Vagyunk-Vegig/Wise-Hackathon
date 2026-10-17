@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
 import { IconButton, PageHeader, Screen } from "../components/ui";
@@ -19,14 +19,20 @@ const rows = [
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { currentUser, totalXp, streak, items } = useStore();
-  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
-  const into = totalXp % XP_PER_LEVEL;
-  const completed = currentUser
+  const route = useRoute<RouteProp<RootStackParamList, "Profile">>();
+  const { currentUser, users, items, completedCounts } = useStore();
+  const requestedId = route.params?.userId;
+  const viewingSelf = !requestedId || requestedId === currentUser?.id;
+  const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
+  const xp = profile?.xp ?? 0;
+  const streak = profile?.streak ?? 0;
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const into = xp % XP_PER_LEVEL;
+  const completed = viewingSelf
     ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
-    : 0;
-  const name = currentUser?.username ?? "No profile";
-  const badgeList = (currentUser?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
+    : completedCounts[profile?.id ?? ""] ?? 0;
+  const name = profile?.username ?? "No profile";
+  const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));
   return (
     <Screen>
@@ -35,17 +41,19 @@ export function ProfileScreen() {
           title="Profile"
           onBack={() => navigation.goBack()}
           right={
-            <IconButton onPress={() => navigation.navigate("Settings")}>
-              <icons.Settings size={18} color={colors.text} />
-            </IconButton>
+            viewingSelf ? (
+              <IconButton onPress={() => navigation.navigate("Settings")}>
+                <icons.Settings size={18} color={colors.text} />
+              </IconButton>
+            ) : undefined
           }
         />
         <View style={styles.identity}>
-          <View style={[styles.portrait, { backgroundColor: currentUser ? colors.accent : colors.surface }]}>
-            <Text style={[styles.initials, currentUser ? null : { color: colors.text }]}>{currentUser?.initials ?? "··"}</Text>
+          <View style={[styles.portrait, { backgroundColor: profile ? colors.accent : colors.surface }]}>
+            <Text style={[styles.initials, profile ? null : { color: colors.text }]}>{profile?.initials ?? "··"}</Text>
           </View>
           <Text style={styles.name}>{name}</Text>
-          {currentUser ? null : <Text style={styles.age}>Sign in to save a profile.</Text>}
+          {profile ? null : <Text style={styles.age}>{viewingSelf ? "Sign in to save a profile." : "This profile is unavailable."}</Text>}
         </View>
         <View style={{ gap: 10, alignItems: "center" }}>
           <Text style={styles.level}>Level {level}</Text>
