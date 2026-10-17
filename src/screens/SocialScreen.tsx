@@ -11,7 +11,7 @@ import type { Person } from "../types";
 
 export function SocialScreen() {
   const root = useRootNav();
-  const { requests, friends, outgoing, users, currentUser, streak, totalXp, acceptRequest, sendRequest, poke } = useStore();
+  const { requests, friends, outgoing, users, currentUser, streak, totalXp, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke } = useStore();
   const progress = (totalXp % 500) / 500;
   const [query, setQuery] = useState("");
   const matches = useMemo(() => searchByUsername(users, query, currentUser?.id).map(toPerson), [users, query, currentUser?.id]);
@@ -32,6 +32,12 @@ export function SocialScreen() {
           <Text style={styles.title}>Social</Text>
           <Text style={styles.sub}>Friends and pokes</Text>
         </View>
+        {pokeNotice ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss poke reward" onPress={dismissPokeNotice} style={styles.notice}>
+            <icons.Bell size={16} color={colors.accent} />
+            <Text style={styles.noticeText}>{pokeNotice}</Text>
+          </Pressable>
+        ) : null}
         <View style={styles.search}>
           <icons.Search size={17} color={colors.muted} />
           <TextInput
@@ -64,15 +70,18 @@ export function SocialScreen() {
         <View style={{ gap: 8 }}>
           <SectionLabel title="FRIENDS" />
           {friends.length === 0 ? <Text style={styles.meta}>No friends yet.</Text> : null}
-          {friends.map((person) => (
-            <PersonRow
-              key={person.id}
-              person={person}
-              action={person.poke === "sent" ? "Sent" : "Poke"}
-              disabled={person.poke !== "poke"}
-              onPress={() => poke(person.id)}
-            />
-          ))}
+          {friends.map((person) => {
+            const tasks = dailyTasks[person.id] ?? { done: 0, total: 0 };
+            return (
+              <PersonRow
+                key={person.id}
+                person={{ ...person, meta: tasks.total === 0 ? "No daily tasks" : `${tasks.done}/${tasks.total}` }}
+                action={person.poke === "sent" ? "Sent" : "Poke"}
+                disabled={person.poke !== "poke"}
+                onPress={() => poke(person.id)}
+              />
+            );
+          })}
         </View>
         <View style={styles.note}>
           <icons.LockKeyhole size={13} color={colors.muted} />
@@ -109,6 +118,8 @@ const styles = StyleSheet.create({
   body: { padding: 16, paddingTop: 24, gap: 24 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   sub: { color: colors.secondary, fontSize: 12, marginTop: 4 },
+  notice: { borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  noticeText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" },
   search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
   input: { flex: 1, color: colors.text, fontSize: 13 },
   row: { height: 72, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12 },

@@ -1,11 +1,38 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { acceptFriendship, bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { TODAY } from "./dates";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
 import type { Item, Person, ToastMessage } from "./types";
 
 const PROBE_USER = "00000000-0000-0000-0000-000000000099";
 let signupName: string | null = null;
+
+const POKE_LIMIT = 5;
+
+type PokeLog = { date: string; ids: string[]; rewarded: string[] };
+
+function readPokeLog(streaks: unknown): PokeLog {
+  const empty = { date: TODAY, ids: [] as string[], rewarded: [] as string[] };
+  if (!streaks || typeof streaks !== "object" || Array.isArray(streaks)) return empty;
+  const pokes = (streaks as { pokes?: Partial<PokeLog> }).pokes;
+  if (!pokes || pokes.date !== TODAY) return empty;
+  return {
+    date: TODAY,
+    ids: Array.isArray(pokes.ids) ? pokes.ids.filter((id): id is string => typeof id === "string") : [],
+    rewarded: Array.isArray(pokes.rewarded) ? pokes.rewarded.filter((id): id is string => typeof id === "string") : [],
+  };
+}
+
+function writePokeLog(streaks: unknown, log: PokeLog) {
+  if (Array.isArray(streaks)) return { count: streaks.length, pokes: log };
+  if (streaks && typeof streaks === "object") return { ...(streaks as Record<string, unknown>), pokes: log };
+  return { count: 0, pokes: log };
+}
+
+function finishedDaily(tasks: { done: number; total: number } | undefined) {
+  return Boolean(tasks && tasks.total > 0 && tasks.done >= tasks.total);
+}
 
 function signupError(message: string) {
   const lower = message.toLowerCase();
@@ -35,10 +62,12 @@ type Store = {
   outgoing: string[];
   users: AppUser[];
   completedCounts: Record<string, number>;
+  dailyTasks: Record<string, { done: number; total: number }>;
   currentUser: AppUser | null;
   signedIn: boolean;
   authReady: boolean;
   commitmentOn: boolean;
+  pokeNotice: string | null;
   toast: ToastMessage | null;
   completeItem: (id: string) => void;
   addItem: (item: NewItem) => Promise<void>;
@@ -48,6 +77,7 @@ type Store = {
   setCommitment: (on: boolean) => void;
   showToast: (text: string, tone?: ToastMessage["tone"], icon?: ToastMessage["icon"]) => void;
   dismissToast: () => void;
+  dismissPokeNotice: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -60,6 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [completedCounts, setCompletedCounts] = useState<Record<string, number>>({});
+  const [dailyTasks, setDailyTasks] = useState<Record<string, { done: number; total: number }>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
@@ -67,6 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<Person[]>([]);
   const [outgoing, setOutgoing] = useState<string[]>([]);
   const [commitmentOn, setCommitment] = useState(false);
+  const [pokeNotice, setPokeNotice] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const rows = useRef(new Map<string, TaskRow>());
   const friendshipRows = useRef<FriendshipRow[]>([]);
@@ -100,7 +132,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       else if (sent) outgoingIds.add(other);
       else requestIds.add(other);
     }
-    setFriends(boardUsers.filter((user) => friendIds.has(user.id)).map(toPerson));
+    const poked = new Set(readPokeLog(boardUsers.find((user) => user.id === currentId)?.streaks).ids);
+    setFriends(
+      boardUsers
+        .filter((user) => friendIds.has(user.id))
+        .map((user) => {
+          const person = toPerson(user);
+          return poked.has(user.id) ? { ...person, poke: "sent" as const } : person;
+        }),
+    );
     setRequests(boardUsers.filter((user) => requestIds.has(user.id)).map(toPerson));
     setOutgoing([...outgoingIds]);
   };
@@ -114,6 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!sessionId) {
         if (!cancelled) {
           setCompletedCounts({});
+          setDailyTasks({});
           publish([], [], null);
           setSignedIn(false);
           setAuthReady(true);
@@ -145,14 +186,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const visibleUsers = board.users.filter((user) => user.id !== PROBE_USER && user.username !== "probe");
       const ownTasks = board.tasks.filter((task) => task.user_id === sessionId);
       const counts: Record<string, number> = {};
+      const daily: Record<string, { done: number; total: number }> = {};
       for (const task of board.tasks) {
-        if (!rowToItem(task).done) continue;
-        counts[task.user_id] = (counts[task.user_id] ?? 0) + 1;
+        const item = rowToItem(task);
+        if (item.done) counts[task.user_id] = (counts[task.user_id] ?? 0) + 1;
+        if (item.kind !== "goal") continue;
+        const current = daily[task.user_id] ?? { done: 0, total: 0 };
+        daily[task.user_id] = { done: current.done + (item.done ? 1 : 0), total: current.total + 1 };
       }
       const friendships = await fetchFriendships().catch(() => []);
+      const log = readPokeLog(profile.streaks);
+      let gained = 0;
+      for (const id of log.ids) {
+        if (log.rewarded.includes(id) || !finishedDaily(daily[id])) continue;
+        log.rewarded.push(id);
+        gained += 5;
+      }
+      if (gained > 0) {
+        profile = { ...profile, xp: profile.xp + gained, streaks: writePokeLog(profile.streaks, log) };
+        void saveUserProgress(profile.id, profile.xp, profile.streaks).catch((error: unknown) => {
+          showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
+        });
+        const notice = gained === 5 ? "Your poke helped — +5 XP" : `Your pokes helped — +${gained} XP`;
+        setPokeNotice(notice);
+        showToast(notice, "success", "heart");
+      }
+      const boardUsers = visibleUsers.map((user) => (user.id === profile.id ? profile : user));
       if (!cancelled) {
         setCompletedCounts(counts);
-        publish(visibleUsers, ownTasks, sessionId, friendships);
+        setDailyTasks(daily);
+        publish(boardUsers, ownTasks, sessionId, friendships);
         setSignedIn(true);
         setAuthReady(true);
       }
@@ -189,13 +252,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       outgoing,
       users,
       completedCounts,
+      dailyTasks,
       currentUser,
       signedIn,
       authReady,
       commitmentOn,
+      pokeNotice,
       toast,
       showToast,
       dismissToast: () => setToast(null),
+      dismissPokeNotice: () => setPokeNotice(null),
       setCommitment,
       completeItem: (id) => {
         const row = rows.current.get(id);
@@ -212,6 +278,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
           setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
+          if (item.kind === "goal") {
+            setDailyTasks((current) => {
+              const previous = current[currentUser.id] ?? { done: 0, total: 0 };
+              return { ...current, [currentUser.id]: { ...previous, done: previous.done + 1 } };
+            });
+          }
         }
         void saveTaskDone(row, true)
           .then(() => {
@@ -276,13 +348,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       poke: (id) => {
         const person = friends.find((entry) => entry.id === id);
         if (!person || person.poke !== "poke" || !currentUser) return;
-        const nextXp = currentUser.xp + 5;
-        setFriends((current) => current.map((entry) => (entry.id === id ? { ...entry, poke: "sent", meta: entry.meta.includes("poked") ? entry.meta : `${entry.meta} · poked today` } : entry)));
-        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp } : user)));
-        void saveUserProgress(currentUser.id, nextXp, currentUser.streaks).catch((error: unknown) => {
+        const log = readPokeLog(currentUser.streaks);
+        if (log.ids.includes(id)) return;
+        if (log.ids.length >= POKE_LIMIT) {
+          showToast("You can only poke 5 people a day.", "error", "alert");
+          return;
+        }
+        log.ids.push(id);
+        const helped = finishedDaily(dailyTasks[id]);
+        if (helped) log.rewarded.push(id);
+        const nextXp = currentUser.xp + (helped ? 5 : 0);
+        const streaks = writePokeLog(currentUser.streaks, log);
+        setFriends((current) => current.map((entry) => (entry.id === id ? { ...entry, poke: "sent" } : entry)));
+        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streaks } : user)));
+        void saveUserProgress(currentUser.id, nextXp, streaks).catch((error: unknown) => {
           showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
         });
-        showToast("Your poke helped — +5 XP", "success", "heart");
+        if (helped) setPokeNotice("Your poke helped — +5 XP");
+        showToast(helped ? "Your poke helped — +5 XP" : "Poked", "success", "heart");
       },
       signIn: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -314,12 +397,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signOut();
         if (error) throw new Error(error.message);
         setCompletedCounts({});
+        setDailyTasks({});
+        setPokeNotice(null);
         publish([], [], null);
         setSignedIn(false);
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, outgoing, users, completedCounts, currentUser, signedIn, authReady, commitmentOn, toast]);
+  }, [items, friends, requests, outgoing, users, completedCounts, dailyTasks, currentUser, signedIn, authReady, commitmentOn, pokeNotice, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }
