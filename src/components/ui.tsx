@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { categoryMeta, icons } from "./Icons";
+import { categoryMeta, icons, profileIcons, type ProfileIconName } from "./Icons";
 import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
@@ -18,6 +18,15 @@ export function IconButton({ onPress, children }: { onPress?: () => void; childr
     <Pressable onPress={onPress} hitSlop={8} style={styles.iconHit}>
       <View style={styles.iconButton}>{children}</View>
     </Pressable>
+  );
+}
+
+export function AvatarMark({ icon, initials, size, textColor, background }: { icon: string | null; initials: string; size: number; textColor: string; background: string }) {
+  const Icon = icon && icon in profileIcons ? profileIcons[icon as ProfileIconName] : null;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: background, alignItems: "center", justifyContent: "center" }}>
+      {Icon ? <Icon size={Math.round(size * 0.46)} color={textColor} /> : <Text style={{ color: textColor, fontSize: Math.round(size * 0.32), fontWeight: "800" }}>{initials}</Text>}
+    </View>
   );
 }
 
@@ -38,9 +47,7 @@ export function TopBar({
   return (
     <View style={styles.topBar}>
       <Pressable onPress={onAvatar} style={styles.avatarWrap}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <AvatarMark icon={currentUser?.icon ?? null} initials={initials} size={40} textColor={colors.onAccent} background={colors.accent} />
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{level}</Text>
         </View>
@@ -88,7 +95,7 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
         {item.title}
       </Text>
       {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
-      {item.money ? (
+      {item.money && !deadline ? (
         <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
           <Text style={styles.euroText}>Ft</Text>
         </View>

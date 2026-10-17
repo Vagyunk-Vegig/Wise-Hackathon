@@ -18,12 +18,14 @@ export type Item = {
   money: boolean;
   date: string;
   done: boolean;
+  doneDates: string[];
 };
 
 export type Person = {
   id: string;
   name: string;
   initials: string;
+  icon: string | null;
   color: string;
   meta: string;
   poke: PokeState;

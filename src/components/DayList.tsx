@@ -9,11 +9,11 @@ import { icons } from "./Icons";
 import { ItemRow, QuietRow, SectionLabel } from "./ui";
 
 export function atRisk(items: Item[], penalty = PENALTY_FT) {
-  return items.filter((item) => item.money && !item.done).length * penalty;
+  return items.filter((item) => item.money && item.kind !== "deadline" && !item.done).length * penalty;
 }
 
 function dayIsClear(items: Item[]) {
-  const moneyItems = items.filter((item) => item.money);
+  const moneyItems = items.filter((item) => item.money && item.kind !== "deadline");
   return moneyItems.length > 0 && moneyItems.every((item) => item.done);
 }
 
@@ -113,7 +113,7 @@ export function DayList({
         <View style={{ gap: 8 }}>
           <SectionLabel title="HABITS" />
           {habits.map((item) => (
-            <ItemRow key={item.id} item={item} showCheck onToggle={onToggle ? () => onToggle(item.id) : undefined} />
+            <ItemRow key={item.id} item={item} showCheck={date <= TODAY} onToggle={date <= TODAY && onToggle ? () => onToggle(item.id) : undefined} />
           ))}
         </View>
         <View style={{ gap: 8 }}>

@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { icons } from "../components/Icons";
-import { Screen, SecondaryButton, TopBar } from "../components/ui";
+import { AvatarMark, Screen, SecondaryButton, TopBar } from "../components/ui";
 import { colors } from "../theme";
 import { useRootNav } from "../routes";
 import { useStore } from "../store";
@@ -9,14 +9,14 @@ import { useStore } from "../store";
 export function LeaderboardScreen() {
   const navigation = useNavigation();
   const root = useRootNav();
-  const { streak, totalXp, users, currentUser } = useStore();
-  const progress = (totalXp % 500) / 500;
+  const { streak, users, currentUser } = useStore();
   const rows = [...users]
     .sort((a, b) => b.streak - a.streak || b.xp - a.xp)
     .map((user, index) => ({
       rank: index + 1,
       name: user.id === currentUser?.id ? "You" : user.username,
       initials: user.initials,
+      icon: user.icon,
       color: user.color,
       streak: user.streak,
       you: user.id === currentUser?.id,
@@ -24,7 +24,7 @@ export function LeaderboardScreen() {
 
   return (
     <Screen>
-      <TopBar progress={progress} streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
+      <TopBar streak={streak} onAvatar={() => root?.navigate("Profile")} onSettings={() => root?.navigate("Settings")} />
       <ScrollView contentContainerStyle={styles.body}>
         <View>
           <Text style={styles.title}>Leaderboard</Text>
@@ -42,11 +42,7 @@ export function LeaderboardScreen() {
             {rows.map((row) => (
               <View key={row.rank} style={[styles.row, row.you && styles.you]}>
                 <Text style={[styles.rank, row.rank === 1 && { color: colors.accent }]}>{row.rank}</Text>
-                <View style={[styles.avatar, row.you && styles.youAvatar]}>
-                  <View style={[styles.avatarInset, row.you && { backgroundColor: colors.onAccent }]}>
-                    <Text style={[styles.initials, { color: row.color }]}>{row.initials}</Text>
-                  </View>
-                </View>
+                <AvatarMark icon={row.icon} initials={row.initials} size={36} textColor={row.you ? colors.onAccent : row.color} background={row.you ? colors.accent : colors.elevated} />
                 <Text style={styles.name}>{row.name}</Text>
                 <icons.Flame size={16} color={colors.streak} fill={colors.streak} />
                 <Text style={styles.streak}>{row.streak}</Text>

@@ -1,8 +1,8 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { icons } from "../components/Icons";
-import { IconButton, PageHeader, Screen } from "../components/ui";
+import { icons, profileIconNames, profileIcons } from "../components/Icons";
+import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
 import { XP_PER_LEVEL } from "../sample";
 import { useStore } from "../store";
@@ -19,12 +19,20 @@ const rows = [
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { currentUser, totalXp, streak, items } = useStore();
-  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
-  const into = totalXp % XP_PER_LEVEL;
-  const completed = currentUser ? items.filter((item) => item.done).length : 0;
-  const name = currentUser?.username ?? "No profile";
-  const badgeList = (currentUser?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
+  const route = useRoute<RouteProp<RootStackParamList, "Profile">>();
+  const { currentUser, users, items, completedCounts, setProfileIcon } = useStore();
+  const requestedId = route.params?.userId;
+  const viewingSelf = !requestedId || requestedId === currentUser?.id;
+  const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
+  const xp = profile?.xp ?? 0;
+  const streak = profile?.streak ?? 0;
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const into = xp % XP_PER_LEVEL;
+  const completed = viewingSelf
+    ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
+    : completedCounts[profile?.id ?? ""] ?? 0;
+  const name = profile?.username ?? "No profile";
+  const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));
   return (
     <Screen>
@@ -33,17 +41,30 @@ export function ProfileScreen() {
           title="Profile"
           onBack={() => navigation.goBack()}
           right={
-            <IconButton onPress={() => navigation.navigate("Settings")}>
-              <icons.Settings size={18} color={colors.text} />
-            </IconButton>
+            viewingSelf ? (
+              <IconButton onPress={() => navigation.navigate("Settings")}>
+                <icons.Settings size={18} color={colors.text} />
+              </IconButton>
+            ) : undefined
           }
         />
         <View style={styles.identity}>
-          <View style={[styles.portrait, { backgroundColor: currentUser ? colors.accent : colors.surface }]}>
-            <Text style={[styles.initials, currentUser ? null : { color: colors.text }]}>{currentUser?.initials ?? "··"}</Text>
-          </View>
+          <AvatarMark icon={profile?.icon ?? null} initials={profile?.initials ?? "··"} size={78} textColor={profile ? colors.onAccent : colors.text} background={profile ? colors.accent : colors.surface} />
           <Text style={styles.name}>{name}</Text>
-          {currentUser ? null : <Text style={styles.age}>Sign in to save a profile.</Text>}
+          {viewingSelf && profile ? (
+            <View style={styles.iconRow}>
+              {profileIconNames.map((iconName) => {
+                const Icon = profileIcons[iconName];
+                const selected = profile.icon === iconName;
+                return (
+                  <Pressable key={iconName} accessibilityRole="button" accessibilityLabel={`${iconName} icon`} onPress={() => void setProfileIcon(selected ? null : iconName)} style={[styles.iconChoice, selected && styles.iconChoiceOn]}>
+                    <Icon size={18} color={selected ? colors.onAccent : colors.text} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+          {profile ? null : <Text style={styles.age}>{viewingSelf ? "Sign in to save a profile." : "This profile is unavailable."}</Text>}
         </View>
         <View style={{ gap: 10, alignItems: "center" }}>
           <Text style={styles.level}>Level {level}</Text>
@@ -100,6 +121,9 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 24, gap: 20 },
   identity: { alignItems: "center", gap: 8 },
+  iconRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 4 },
+  iconChoice: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  iconChoiceOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   portrait: { width: 78, height: 78, borderRadius: 39, alignItems: "center", justifyContent: "center" },
   initials: { color: colors.onAccent, fontSize: 26, fontWeight: "800" },
   name: { color: colors.text, fontSize: 26, fontWeight: "700" },

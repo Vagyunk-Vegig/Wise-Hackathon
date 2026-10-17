@@ -1,3 +1,4 @@
+import { isProfileIcon } from "./components/Icons";
 import { TODAY } from "./dates";
 import { supabase } from "./supabase";
 import { Category, type Item, type ItemKind, type Person } from "./types";
@@ -12,6 +13,7 @@ export type AppUser = {
   streak: number;
   badges: string[];
   initials: string;
+  icon: string | null;
   color: string;
   streaks: unknown;
 };
@@ -20,6 +22,7 @@ type TaskMeta = {
   note: string;
   date: string;
   done: boolean;
+  doneDates: string[];
   xp: number;
   money: boolean;
   category: Category;
@@ -40,6 +43,7 @@ type UserRow = {
   xp: number | string | null;
   streaks: unknown;
   badges: unknown;
+  icon?: string | null;
 };
 
 const categoryValues = new Set<string>(Object.values(Category));
@@ -78,6 +82,7 @@ export function toAppUser(row: UserRow, index: number): AppUser {
     streak: readStreak(row.streaks),
     badges: readBadges(row.badges),
     initials: initialsFor(username),
+    icon: typeof row.icon === "string" && isProfileIcon(row.icon) ? row.icon : null,
     color: COLORS[index % COLORS.length],
     streaks: row.streaks,
   };
@@ -88,6 +93,7 @@ export function toPerson(user: AppUser): Person {
     id: user.id,
     name: user.username,
     initials: user.initials,
+    icon: user.icon,
     color: user.color,
     meta: user.streak > 0 ? `${user.streak} day streak` : "Not started",
     poke: "poke",
@@ -112,10 +118,17 @@ function taskTypeFor(kind: ItemKind) {
   return "daily";
 }
 
-function expirationDate(setup: string) {
+function expirationDate(kind: ItemKind, setup: string) {
+  if (kind === "habit") return "2099-12-31";
   const today = TODAY;
   const next = shiftDate(setup, 1);
   return next > today ? next : today;
+}
+
+function readDoneDates(value: unknown, done: boolean, date: string) {
+  const listed = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry)) : [];
+  if (done && !listed.includes(date)) listed.push(date);
+  return listed;
 }
 
 function decodeMeta(description: string | null, taskType: string, category: string): TaskMeta {
@@ -123,12 +136,15 @@ function decodeMeta(description: string | null, taskType: string, category: stri
     try {
       const parsed = JSON.parse(description.slice(META.length)) as Partial<TaskMeta>;
       const kind = kindFor(taskType);
+      const date = typeof parsed.date === "string" ? parsed.date : TODAY;
+      const done = Boolean(parsed.done);
       return {
         note: typeof parsed.note === "string" ? parsed.note : "",
-        date: typeof parsed.date === "string" ? parsed.date : TODAY,
-        done: Boolean(parsed.done),
-        xp: typeof parsed.xp === "number" ? parsed.xp : xpFor(kind),
-        money: typeof parsed.money === "boolean" ? parsed.money : kind !== "deadline",
+        date,
+        done,
+        doneDates: readDoneDates(parsed.doneDates, done && kind === "habit", date),
+        xp: xpFor(kind),
+        money: kind !== "deadline",
         category: parsed.category && isCategory(parsed.category) ? parsed.category : isCategory(category) ? category : Category.Other,
       };
     } catch {
@@ -140,6 +156,7 @@ function decodeMeta(description: string | null, taskType: string, category: stri
     note: description ?? "",
     date: TODAY,
     done: false,
+    doneDates: [],
     xp: xpFor(kind),
     money: kind !== "deadline",
     category: isCategory(category) ? category : Category.Other,
@@ -161,6 +178,7 @@ export function rowToItem(row: TaskRow): Item {
     money: meta.money,
     date: meta.date,
     done: meta.done,
+    doneDates: meta.doneDates,
   };
 }
 
@@ -171,15 +189,53 @@ export type FriendshipRow = {
   user_receiver: string;
 };
 
+const friendshipColumns = "id,is_accepted,user_sender,user_receiver";
+
+function toFriendship(row: FriendshipRow): FriendshipRow {
+  return { ...row, id: Number(row.id), is_accepted: Boolean(row.is_accepted) };
+}
+
 export async function fetchFriendships() {
-  const { data, error } = await supabase.from("friendship").select("id,is_accepted,user_sender,user_receiver");
+  const { data, error } = await supabase.from("friendship").select(friendshipColumns);
   if (error) throw new Error(error.message);
-  return (data ?? []) as FriendshipRow[];
+  return ((data ?? []) as FriendshipRow[]).map(toFriendship);
+}
+
+export async function insertFriendship(sender: string, receiver: string) {
+  const { data, error } = await supabase
+    .from("friendship")
+    .insert({ user_sender: sender, user_receiver: receiver, is_accepted: false, acceptance_date: null })
+    .select(friendshipColumns)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not send the friend request.");
+  return toFriendship(data as FriendshipRow);
+}
+
+export async function acceptFriendship(id: number) {
+  const { error } = await supabase.from("friendship").update({ is_accepted: true, acceptance_date: new Date().toISOString().slice(0, 10) }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+async function selectUsers(columns: string) {
+  const first = await supabase.from("user").select(columns);
+  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
+    return supabase.from("user").select(legacyUserColumns);
+  }
+  return first;
+}
+
+async function selectUser(id: string, columns: string) {
+  const first = await supabase.from("user").select(columns).eq("user_id", id).maybeSingle();
+  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
+    return supabase.from("user").select(legacyUserColumns).eq("user_id", id).maybeSingle();
+  }
+  return first;
 }
 
 export async function fetchBoard() {
   const [users, tasks] = await Promise.all([
-    supabase.from("user").select("user_id,username,xp,streaks,badges"),
+    selectUsers(userColumns),
     supabase.from("task").select("id,user_id,title,description,category,task_type"),
   ]);
   if (users.error) throw new Error(users.error.message);
@@ -190,12 +246,27 @@ export async function fetchBoard() {
   };
 }
 
-const userColumns = "user_id,username,xp,streaks,badges";
+const userColumns = "user_id,username,xp,streaks,badges,icon";
+const legacyUserColumns = "user_id,username,xp,streaks,badges";
+
+function missingIconColumn(message: string) {
+  return message.toLowerCase().includes("icon");
+}
 
 async function readUser(id: string) {
-  const { data, error } = await supabase.from("user").select(userColumns).eq("user_id", id).maybeSingle();
+  const { data, error } = await selectUser(id, userColumns);
   if (error) throw new Error(error.message);
   return data ? toAppUser(data as UserRow, 0) : null;
+}
+
+export async function updateUserIcon(id: string, icon: string | null) {
+  const { error } = await supabase.from("user").update({ icon }).eq("user_id", id);
+  if (error) {
+    if (missingIconColumn(error.message)) {
+      throw new Error("The profile icon column is missing. In the Supabase SQL editor, add icon text to the user table.");
+    }
+    throw new Error(error.message);
+  }
 }
 
 export async function insertUser(id: string, username: string) {
@@ -204,6 +275,12 @@ export async function insertUser(id: string, username: string) {
     .insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] })
     .select(userColumns)
     .maybeSingle();
+  if (error && missingIconColumn(error.message)) {
+    const again = await supabase.from("user").insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] }).select(legacyUserColumns).maybeSingle();
+    if (again.error) throw new Error(again.error.message);
+    if (!again.data) throw new Error("Could not save the profile.");
+    return toAppUser(again.data as UserRow, 0);
+  }
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Could not save the profile.");
   return toAppUser(data as UserRow, 0);
@@ -216,8 +293,11 @@ export async function ensureUser(id: string, username: string) {
     if (existing.username === name || name === "you") return existing;
     const blank = !existing.username.trim() || existing.username === "User";
     if (!blank) return existing;
-    const { data, error } = await supabase.from("user").update({ username: name }).eq("user_id", id).select(userColumns).maybeSingle();
-    if (error || !data) return existing;
+    const updated = await supabase.from("user").update({ username: name }).eq("user_id", id).select(userColumns).maybeSingle();
+    const data = updated.error && missingIconColumn(updated.error.message)
+      ? (await supabase.from("user").update({ username: name }).eq("user_id", id).select(legacyUserColumns).maybeSingle()).data
+      : updated.data;
+    if (!data) return existing;
     return toAppUser(data as UserRow, 0);
   }
   try {
@@ -241,6 +321,7 @@ export async function insertTask(input: {
     note: input.note,
     date: input.date,
     done: false,
+    doneDates: [],
     xp: xpFor(input.kind),
     money: input.kind !== "deadline",
     category: input.category,
@@ -254,7 +335,7 @@ export async function insertTask(input: {
       category: input.category,
       task_type: taskTypeFor(input.kind),
       setup_date: input.date,
-      expiration_date: expirationDate(input.date),
+      expiration_date: expirationDate(input.kind, input.date),
     })
     .select("id,user_id,title,description,category,task_type")
     .single();
@@ -270,10 +351,17 @@ export async function insertTask(input: {
   return data as TaskRow;
 }
 
-export async function saveTaskDone(row: TaskRow, done: boolean) {
+export async function saveTaskDone(row: TaskRow, done: boolean, occurrenceDate?: string) {
   const meta = decodeMeta(row.description, row.task_type, row.category);
-  const { error } = await supabase.from("task").update({ description: encodeMeta({ ...meta, done }) }).eq("id", row.id);
+  const kind = kindFor(row.task_type);
+  const next: TaskMeta =
+    kind === "habit" && occurrenceDate
+      ? { ...meta, doneDates: meta.doneDates.includes(occurrenceDate) ? meta.doneDates : [...meta.doneDates, occurrenceDate] }
+      : { ...meta, done };
+  const description = encodeMeta(next);
+  const { error } = await supabase.from("task").update({ description }).eq("id", row.id);
   if (error) throw new Error(error.message);
+  return { ...row, description };
 }
 
 export function bumpStreak(current: unknown, today: string) {
