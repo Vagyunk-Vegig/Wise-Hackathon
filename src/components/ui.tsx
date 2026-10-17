@@ -100,14 +100,15 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
           <Text style={styles.euroText}>Ft</Text>
         </View>
       ) : null}
-      {deadline ? (
+      {deadline && !item.done ? (
         <View style={[styles.chip, dueChip(item.date) === "Due today" ? styles.chipHot : dueChip(item.date) === "Overdue" ? styles.chipBad : styles.chipSoon]}>
           <Text style={[styles.chipText, dueChip(item.date) === "Due today" ? { color: colors.due } : dueChip(item.date) === "Overdue" ? { color: "#FF8ABF" } : { color: colors.accent }]}>
             {dueChip(item.date)}
           </Text>
         </View>
-      ) : showCheck ? (
-        <Pressable onPress={onToggle} disabled={item.done} hitSlop={8}>
+      ) : null}
+      {showCheck ? (
+        <Pressable onPress={onToggle} disabled={item.done} hitSlop={8} accessibilityRole="checkbox" accessibilityState={{ checked: item.done }} accessibilityLabel={item.title}>
           <View style={[styles.check, item.done && styles.checkOn]}>
             {item.done ? <icons.Check size={14} color={colors.onAccent} strokeWidth={3} /> : null}
           </View>

@@ -122,7 +122,9 @@ export function DayList({
         </View>
         <View style={{ gap: 8 }}>
           <SectionLabel title="DEADLINE" />
-          {deadlines.length === 0 ? <QuietRow title="Nothing due" /> : deadlines.map((item) => <ItemRow key={item.id} item={item} />)}
+          {deadlines.length === 0 ? <QuietRow title="Nothing due" /> : deadlines.map((item) => (
+            <ItemRow key={item.id} item={item} showCheck={date === TODAY} onToggle={date === TODAY && onToggle ? () => onToggle(item.id) : undefined} />
+          ))}
         </View>
       </View>
     </View>

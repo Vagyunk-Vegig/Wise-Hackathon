@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { BadgeCollection } from "../components/BadgeCollection";
 import { icons } from "../components/Icons";
 import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
@@ -32,7 +33,6 @@ export function ProfileScreen() {
     ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
     : completedCounts[profile?.id ?? ""] ?? 0;
   const name = profile?.username ?? "No profile";
-  const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));
   return (
     <Screen>
@@ -83,23 +83,9 @@ export function ProfileScreen() {
             ))}
           </View>
         </View>
-        <View style={{ gap: 14 }}>
-          <Text style={styles.block}>Achievements</Text>
-          {badgeList.length === 0 ? (
-            <Text style={styles.age}>No achievements yet. Complete a task to start one.</Text>
-          ) : (
-            <View style={styles.badges}>
-              {badgeList.map((badge) => (
-                <View key={badge.label} style={styles.badge}>
-                  <View style={[styles.ring, { borderColor: badge.color }]}>
-                    <badge.Icon size={19} color={badge.color} />
-                  </View>
-                  <Text style={styles.badgeLabel}>{badge.label}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        {profile ? (
+          <BadgeCollection name={name} xp={xp} streak={streak} completed={completed} streaks={profile.streaks} badges={profile.badges} items={viewingSelf ? items : null} />
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -123,8 +109,4 @@ const styles = StyleSheet.create({
   heatCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 16, alignItems: "center", gap: 3 },
   heatRow: { flexDirection: "row", gap: 3 },
   cell: { width: 14, height: 14, borderRadius: 3 },
-  badges: { flexDirection: "row", gap: 6 },
-  badge: { flex: 1, alignItems: "center", gap: 8 },
-  ring: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  badgeLabel: { color: colors.secondary, fontSize: 8, textAlign: "center", lineHeight: 11 },
 });
