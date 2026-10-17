@@ -1,4 +1,4 @@
-# habit.
+# Morrow.
 
 A dark, mobile-first habit app. You plan a small set of daily goals, keep habits, and mark deadlines. Unfinished money tasks stay on the line as forints. Friends can see progress, not task titles.
 
