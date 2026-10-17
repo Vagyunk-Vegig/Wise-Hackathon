@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://dhqkgwohhnddwafcugrp.supabase.co";
-const SUPABASE_ANON_KEY =
+export const SUPABASE_URL = "https://dhqkgwohhnddwafcugrp.supabase.co";
+export const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRocWtnd29oaG5kZHdhZmN1Z3JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNzM5NTgsImV4cCI6MjEwNzc0OTk1OH0.ZU2CPWdqPySn3y_ep5IbYDCDo9ebXzjiW3Eky4xYBOc";
 
 const memory = new Map<string, string>();

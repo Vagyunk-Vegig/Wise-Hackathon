@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { acceptFriendship, bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
@@ -75,6 +75,8 @@ type Store = {
   sendRequest: (id: string) => Promise<void>;
   poke: (id: string) => void;
   setProfileIcon: (icon: string | null) => Promise<void>;
+  renameUser: (username: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setCommitment: (on: boolean) => void;
   showToast: (text: string, tone?: ToastMessage["tone"], icon?: ToastMessage["icon"]) => void;
   dismissToast: () => void;
@@ -390,6 +392,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, icon: previous } : user)));
           showToast(error instanceof Error ? error.message : "Could not save the icon", "error", "alert");
         }
+      },
+      renameUser: async (username) => {
+        if (!currentUser) throw new Error("Sign in first.");
+        const name = username.trim();
+        if (!name || name === currentUser.username) return;
+        const previous = currentUser;
+        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, username: name, initials: initialsFor(name) } : user)));
+        try {
+          await updateUsername(currentUser.id, name);
+          showToast("Username saved");
+        } catch (error) {
+          setUsers((current) => current.map((user) => (user.id === currentUser.id ? previous : user)));
+          throw error;
+        }
+      },
+      deleteAccount: async () => {
+        if (!currentUser) throw new Error("Sign in first.");
+        await deleteAccount(currentUser.id);
+        const { error } = await supabase.auth.signOut();
+        if (error) throw new Error(error.message);
+        setCompletedCounts({});
+        setDailyTasks({});
+        setPokeNotice(null);
+        publish([], [], null);
+        setSignedIn(false);
+        showToast("Account deleted");
       },
       signIn: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

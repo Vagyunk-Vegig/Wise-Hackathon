@@ -1,6 +1,6 @@
 import { isProfileIcon } from "./components/Icons";
 import { TODAY } from "./dates";
-import { supabase } from "./supabase";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "./supabase";
 import { Category, type Item, type ItemKind, type Person } from "./types";
 
 const META = "@@meta ";
@@ -256,6 +256,54 @@ async function readUser(id: string) {
   const { data, error } = await selectUser(id, userColumns);
   if (error) throw new Error(error.message);
   return data ? toAppUser(data as unknown as UserRow, 0) : null;
+}
+
+export async function updateUsername(id: string, username: string) {
+  const name = username.trim();
+  if (!name) throw new Error("Add a username.");
+  if (name.length > 24) throw new Error("Use a username of at most 24 characters.");
+  const { error } = await supabase.from("user").update({ username: name }).eq("user_id", id);
+  if (error) throw new Error(error.message);
+  const authUpdate = await supabase.auth.updateUser({ data: { username: name } });
+  if (authUpdate.error) throw new Error(authUpdate.error.message);
+  return name;
+}
+
+function deleteDenied(message: string) {
+  const text = message.toLowerCase();
+  return text.includes("row-level security") || text.includes("permission") || text.includes("policy");
+}
+
+async function deleteAuthUser() {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return false;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+  });
+  return response.ok;
+}
+
+export async function deleteAccount(id: string) {
+  const rpc = await supabase.rpc("delete_own_account");
+  if (!rpc.error) return;
+  const missing = /delete_own_account|could not find the function|schema cache/i.test(rpc.error.message);
+  if (!missing) throw new Error(rpc.error.message);
+
+  const friendship = await supabase.from("friendship").delete().or(`user_sender.eq.${id},user_receiver.eq.${id}`);
+  if (friendship.error) {
+    throw new Error(deleteDenied(friendship.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : friendship.error.message);
+  }
+  const tasks = await supabase.from("task").delete().eq("user_id", id);
+  if (tasks.error) {
+    throw new Error(deleteDenied(tasks.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : tasks.error.message);
+  }
+  const profile = await supabase.from("user").delete().eq("user_id", id);
+  if (profile.error) {
+    throw new Error(deleteDenied(profile.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : profile.error.message);
+  }
+  await deleteAuthUser();
 }
 
 export async function updateUserIcon(id: string, icon: string | null) {
