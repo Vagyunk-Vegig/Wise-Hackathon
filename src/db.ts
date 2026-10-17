@@ -1,6 +1,6 @@
 import { isProfileIcon } from "./components/Icons";
 import { TODAY } from "./dates";
-import { supabase } from "./supabase";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from "./supabase";
 import { Category, type Item, type ItemKind, type Person } from "./types";
 
 const META = "@@meta ";
@@ -219,17 +219,15 @@ export async function acceptFriendship(id: number) {
 
 async function selectUsers(columns: string) {
   const first = await supabase.from("user").select(columns);
-  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
-    return supabase.from("user").select(legacyUserColumns);
-  }
+  const next = first.error ? narrowerColumns(columns, first.error.message) : null;
+  if (next) return selectUsers(next);
   return first;
 }
 
 async function selectUser(id: string, columns: string) {
   const first = await supabase.from("user").select(columns).eq("user_id", id).maybeSingle();
-  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
-    return supabase.from("user").select(legacyUserColumns).eq("user_id", id).maybeSingle();
-  }
+  const next = first.error ? narrowerColumns(columns, first.error.message) : null;
+  if (next) return selectUser(id, next);
   return first;
 }
 
@@ -241,7 +239,7 @@ export async function fetchBoard() {
   if (users.error) throw new Error(users.error.message);
   if (tasks.error) throw new Error(tasks.error.message);
   return {
-    users: ((users.data ?? []) as UserRow[]).map(toAppUser),
+    users: ((users.data ?? []) as unknown as UserRow[]).map(toAppUser),
     tasks: (tasks.data ?? []) as TaskRow[],
   };
 }
@@ -249,20 +247,69 @@ export async function fetchBoard() {
 const userColumns = "user_id,username,xp,streaks,badges,icon";
 const legacyUserColumns = "user_id,username,xp,streaks,badges";
 
-function missingIconColumn(message: string) {
-  return message.toLowerCase().includes("icon");
+function narrowerColumns(columns: string, message: string) {
+  if (columns === userColumns && message.toLowerCase().includes("icon")) return legacyUserColumns;
+  return null;
 }
 
 async function readUser(id: string) {
   const { data, error } = await selectUser(id, userColumns);
   if (error) throw new Error(error.message);
-  return data ? toAppUser(data as UserRow, 0) : null;
+  return data ? toAppUser(data as unknown as UserRow, 0) : null;
+}
+
+export async function updateUsername(id: string, username: string) {
+  const name = username.trim();
+  if (!name) throw new Error("Add a username.");
+  if (name.length > 24) throw new Error("Use a username of at most 24 characters.");
+  const { error } = await supabase.from("user").update({ username: name }).eq("user_id", id);
+  if (error) throw new Error(error.message);
+  const authUpdate = await supabase.auth.updateUser({ data: { username: name } });
+  if (authUpdate.error) throw new Error(authUpdate.error.message);
+  return name;
+}
+
+function deleteDenied(message: string) {
+  const text = message.toLowerCase();
+  return text.includes("row-level security") || text.includes("permission") || text.includes("policy");
+}
+
+async function deleteAuthUser() {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return false;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+  });
+  return response.ok;
+}
+
+export async function deleteAccount(id: string) {
+  const rpc = await supabase.rpc("delete_own_account");
+  if (!rpc.error) return;
+  const missing = /delete_own_account|could not find the function|schema cache/i.test(rpc.error.message);
+  if (!missing) throw new Error(rpc.error.message);
+
+  const friendship = await supabase.from("friendship").delete().or(`user_sender.eq.${id},user_receiver.eq.${id}`);
+  if (friendship.error) {
+    throw new Error(deleteDenied(friendship.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : friendship.error.message);
+  }
+  const tasks = await supabase.from("task").delete().eq("user_id", id);
+  if (tasks.error) {
+    throw new Error(deleteDenied(tasks.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : tasks.error.message);
+  }
+  const profile = await supabase.from("user").delete().eq("user_id", id);
+  if (profile.error) {
+    throw new Error(deleteDenied(profile.error.message) ? "Account deletion is blocked. Add the delete_own_account function in the Supabase SQL editor." : profile.error.message);
+  }
+  await deleteAuthUser();
 }
 
 export async function updateUserIcon(id: string, icon: string | null) {
   const { error } = await supabase.from("user").update({ icon }).eq("user_id", id);
   if (error) {
-    if (missingIconColumn(error.message)) {
+    if (error.message.toLowerCase().includes("icon")) {
       throw new Error("The profile icon column is missing. In the Supabase SQL editor, add icon text to the user table.");
     }
     throw new Error(error.message);
@@ -275,11 +322,19 @@ export async function insertUser(id: string, username: string) {
     .insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] })
     .select(userColumns)
     .maybeSingle();
-  if (error && missingIconColumn(error.message)) {
-    const again = await supabase.from("user").insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] }).select(legacyUserColumns).maybeSingle();
-    if (again.error) throw new Error(again.error.message);
+  const next = error ? narrowerColumns(userColumns, error.message) : null;
+  if (next) {
+    const again = await supabase.from("user").insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] }).select(next).maybeSingle();
+    if (again.error) {
+      const legacy = narrowerColumns(next, again.error.message);
+      if (!legacy) throw new Error(again.error.message);
+      const last = await supabase.from("user").insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] }).select(legacy).maybeSingle();
+      if (last.error) throw new Error(last.error.message);
+      if (!last.data) throw new Error("Could not save the profile.");
+      return toAppUser(last.data as unknown as UserRow, 0);
+    }
     if (!again.data) throw new Error("Could not save the profile.");
-    return toAppUser(again.data as UserRow, 0);
+    return toAppUser(again.data as unknown as UserRow, 0);
   }
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Could not save the profile.");
@@ -294,11 +349,10 @@ export async function ensureUser(id: string, username: string) {
     const blank = !existing.username.trim() || existing.username === "User";
     if (!blank) return existing;
     const updated = await supabase.from("user").update({ username: name }).eq("user_id", id).select(userColumns).maybeSingle();
-    const data = updated.error && missingIconColumn(updated.error.message)
-      ? (await supabase.from("user").update({ username: name }).eq("user_id", id).select(legacyUserColumns).maybeSingle()).data
-      : updated.data;
+    const next = updated.error ? narrowerColumns(userColumns, updated.error.message) : null;
+    const data = next ? (await supabase.from("user").update({ username: name }).eq("user_id", id).select(next).maybeSingle()).data : updated.data;
     if (!data) return existing;
-    return toAppUser(data as UserRow, 0);
+    return toAppUser(data as unknown as UserRow, 0);
   }
   try {
     return await insertUser(id, name);
