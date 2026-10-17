@@ -7,25 +7,43 @@ import { icons } from "./Icons";
 
 export function tomorrowItemCount(items: Item[]) {
   const tomorrow = shiftDate(TODAY, 1);
-  return items.filter((item) => item.date === tomorrow).length;
+  return items.filter((item) => item.kind === "goal" && item.date === tomorrow).length;
 }
 
-export function TomorrowBanner({ onPress, pendingDate }: { onPress: () => void; pendingDate?: string }) {
+export function tomorrowQuotaFilled(items: Item[], dailyCount: number) {
+  return dailyCount > 0 && tomorrowItemCount(items) >= dailyCount;
+}
+
+export function TomorrowBanner({
+  onPress,
+  pendingDate,
+  stayVisible = false,
+}: {
+  onPress: () => void;
+  pendingDate?: string;
+  stayVisible?: boolean;
+}) {
   const { items, onboardingComplete, dailyCount } = useStore();
   if (!onboardingComplete || dailyCount <= 0) return null;
   const target = dailyCount;
   const tomorrow = shiftDate(TODAY, 1);
   const saved = tomorrowItemCount(items);
-  if (saved >= target) return null;
-  const done = Math.min(target, saved + (pendingDate === tomorrow ? 1 : 0));
+  const filled = saved >= target;
+  if (filled && !stayVisible) return null;
+  const done = Math.min(target, saved + (!filled && pendingDate === tomorrow ? 1 : 0));
 
   return (
-    <Pressable onPress={onPress} style={styles.banner} accessibilityLabel={`Tomorrow ${done}/${target}. Write tomorrow's tasks.`}>
+    <Pressable
+      onPress={onPress}
+      disabled={filled}
+      style={[styles.banner, filled && styles.bannerFilled]}
+      accessibilityLabel={`Tomorrow ${done}/${target}. Write tomorrow's tasks.`}
+    >
       <View style={styles.copy}>
-        <Text style={styles.title}>{`Tomorrow ${done}/${target}`}</Text>
-        <Text style={styles.body}>Write tomorrow's tasks.</Text>
+        <Text style={[styles.title, filled && styles.titleFilled]}>{`Tomorrow ${done}/${target}`}</Text>
+        <Text style={styles.body}>{filled ? "Tomorrow's tasks are set." : "Write tomorrow's tasks."}</Text>
       </View>
-      <icons.Plus size={20} color={colors.accent} />
+      {filled ? null : <icons.Plus size={20} color={colors.accent} />}
     </Pressable>
   );
 }
@@ -43,6 +61,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   copy: { flex: 1, gap: 2 },
+  bannerFilled: { borderColor: colors.border, opacity: 0.7 },
   title: { color: colors.accent, fontSize: 15, fontWeight: "700" },
+  titleFilled: { color: colors.secondary },
   body: { color: colors.secondary, fontSize: 13 },
 });

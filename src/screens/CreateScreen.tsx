@@ -4,7 +4,7 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryMeta, icons } from "../components/Icons";
-import { TomorrowBanner } from "../components/TomorrowBanner";
+import { TomorrowBanner, tomorrowQuotaFilled } from "../components/TomorrowBanner";
 import { IconButton, PageHeader, PrimaryButton, Screen } from "../components/ui";
 import { TODAY, isoDate, longDate, monthGrid, parts, shiftDate, shortDate } from "../dates";
 import { colors, radius } from "../theme";
@@ -13,8 +13,8 @@ import { Category, type ItemKind } from "../types";
 import type { RootStackParamList } from "../routes";
 
 const kinds: Array<{ kind: ItemKind; label: string; hint: string; Icon: typeof icons.Repeat2 }> = [
+  { kind: "goal", label: "Daily goal", hint: "Once", Icon: icons.CircleCheck },
   { kind: "habit", label: "Habit", hint: "Repeats", Icon: icons.Repeat2 },
-  { kind: "goal", label: "Task", hint: "Once", Icon: icons.CircleCheck },
   { kind: "deadline", label: "Deadline", hint: "A date", Icon: icons.CalendarClock },
 ];
 
@@ -23,7 +23,9 @@ const categories = Object.values(Category);
 export function CreateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Create">>();
-  const { addItem, showToast } = useStore();
+  const { addItem, showToast, items, dailyCount, onboardingComplete } = useStore();
+  const tomorrow = shiftDate(TODAY, 1);
+  const quotaFull = onboardingComplete && tomorrowQuotaFilled(items, dailyCount);
   const [kind, setKind] = useState<ItemKind>(route.params?.kind ?? "habit");
   const [title, setTitle] = useState(route.params?.kind ? "" : "Drink water");
   const [description, setDescription] = useState("");
@@ -36,15 +38,18 @@ export function CreateScreen() {
   const [dateError, setDateError] = useState(false);
   const [saving, setSaving] = useState(false);
   const insets = useSafeAreaInsets();
+  const taskLocked = kind === "goal";
+  const submitDate = taskLocked ? tomorrow : date;
+  const taskDisabled = taskLocked && quotaFull;
 
   const closePicker = () => setPickerOpen(false);
 
   const submit = async () => {
     const missingTitle = title.trim().length === 0;
-    const missingDate = kind === "deadline" && !date;
+    const missingDate = kind === "deadline" && !submitDate;
     setTitleError(missingTitle);
     setDateError(missingDate);
-    if (missingTitle || missingDate || saving) return;
+    if (missingTitle || missingDate || saving || taskDisabled) return;
     setSaving(true);
     try {
       await addItem({
@@ -53,10 +58,10 @@ export function CreateScreen() {
         category,
         xp: kind === "deadline" ? 0 : kind === "habit" ? 10 : 20,
         money: kind !== "deadline",
-        date,
+        date: submitDate,
         description: description.trim(),
       });
-      showToast(savedLabel(kind, date));
+      showToast(savedLabel(kind, submitDate));
       navigation.goBack();
     } catch (error) {
       setSaving(false);
@@ -72,20 +77,32 @@ export function CreateScreen() {
         <View style={{ gap: 20 }}>
           <PageHeader title="Create" onBack={() => navigation.goBack()} />
           <TomorrowBanner
-            pendingDate={date}
+            stayVisible={taskLocked}
+            pendingDate={taskLocked ? tomorrow : undefined}
             onPress={() => {
-              setDate(shiftDate(TODAY, 1));
+              if (quotaFull) return;
               setKind("goal");
+              setPickerOpen(false);
             }}
           />
           <View style={styles.types}>
             {kinds.map((choice) => {
               const on = choice.kind === kind;
+              const locked = choice.kind === "goal" && quotaFull;
               return (
-                <Pressable key={choice.kind} onPress={() => setKind(choice.kind)} style={[styles.type, on && styles.typeOn]}>
+                <Pressable
+                  key={choice.kind}
+                  onPress={() => {
+                    if (locked) return;
+                    setKind(choice.kind);
+                    if (choice.kind === "goal") setPickerOpen(false);
+                  }}
+                  disabled={locked}
+                  style={[styles.type, on && styles.typeOn, locked && styles.typeLocked]}
+                >
                   <choice.Icon size={18} color={on ? colors.accent : colors.text} />
                   <Text style={[styles.typeLabel, on && { color: colors.accent }]}>{choice.label}</Text>
-                  <Text style={styles.typeHint}>{choice.hint}</Text>
+                  <Text style={styles.typeHint}>{locked ? "Quota filled" : choice.hint}</Text>
                 </Pressable>
               );
             })}
@@ -127,23 +144,28 @@ export function CreateScreen() {
           </Field>
           <Field label={dateLabel} error={dateError ? "Choose a due date." : undefined}>
             <Pressable
+              disabled={taskLocked}
               onPress={() => {
                 const current = parts(date);
                 setCursor({ year: current.year, month: current.month });
                 setPickerOpen((open) => !open);
                 setDateError(false);
               }}
-              style={[styles.input, styles.dateInput, dateError && styles.inputError, pickerOpen && styles.dateOpen]}
+              style={[styles.input, styles.dateInput, dateError && styles.inputError, pickerOpen && styles.dateOpen, taskLocked && styles.dateLocked]}
             >
-              <Text style={{ flex: 1, color: date ? colors.text : colors.placeholder, fontSize: 14 }}>{date ? longDate(date) : ""}</Text>
-              <icons.CalendarDays size={17} color={pickerOpen ? colors.accent : colors.secondary} />
+              <Text style={{ flex: 1, color: submitDate ? colors.text : colors.placeholder, fontSize: 14 }}>{submitDate ? longDate(submitDate) : ""}</Text>
+              {taskLocked ? null : <icons.CalendarDays size={17} color={pickerOpen ? colors.accent : colors.secondary} />}
             </Pressable>
           </Field>
           {kind === "habit" ? (
             <Text style={styles.help}>A new occurrence appears each day. You can complete it once per day.</Text>
           ) : null}
         </View>
-        <PrimaryButton label={saving ? "Saving" : kind === "habit" ? "Create habit" : kind === "goal" ? "Create task" : "Create deadline"} onPress={submit} disabled={saving} />
+        <PrimaryButton
+          label={saving ? "Saving" : taskDisabled ? "Quota filled" : kind === "habit" ? "Create habit" : kind === "goal" ? "Create daily goal" : "Create deadline"}
+          onPress={submit}
+          disabled={saving || taskDisabled}
+        />
       </ScrollView>
       {pickerOpen ? (
         <View style={styles.sheetRoot} pointerEvents="box-none">
@@ -172,7 +194,7 @@ export function CreateScreen() {
 }
 
 function savedLabel(kind: ItemKind, date: string) {
-  const name = kind === "deadline" ? "Deadline" : kind === "habit" ? "Habit" : "Task";
+  const name = kind === "deadline" ? "Deadline" : kind === "habit" ? "Habit" : "Daily goal";
   if (date === TODAY) return `${name} saved for today`;
   if (date === shiftDate(TODAY, 1)) return `${name} saved for tomorrow`;
   return `${name} saved for ${shortDate(date)}`;
@@ -240,7 +262,9 @@ const styles = StyleSheet.create({
   types: { flexDirection: "row", gap: 8 },
   type: { flex: 1, height: 92, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", gap: 5 },
   typeOn: { borderColor: colors.accent, backgroundColor: "rgba(182,255,112,0.08)" },
-  typeLabel: { color: colors.text, fontSize: 13, fontWeight: "700" },
+  typeLocked: { opacity: 0.45 },
+  dateLocked: { opacity: 0.7 },
+  typeLabel: { color: colors.text, fontSize: 13, fontWeight: "700", textAlign: "center" },
   typeHint: { color: colors.muted, fontSize: 11 },
   label: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
   input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14 },
