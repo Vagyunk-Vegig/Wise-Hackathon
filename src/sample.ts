@@ -25,13 +25,13 @@ export const habitDots = ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"
 export const taskDots = ["2026-10-14", "2026-10-16", "2026-10-22", "2026-10-28"];
 
 export const sampleRequests: Person[] = [
-  { id: "jordan", name: "Jordan", initials: "JO", color: "#FF6BB5", meta: "Wants to connect", poke: "poke" },
+  { id: "jordan", name: "Jordan", initials: "JO", icon: null, color: "#FF6BB5", meta: "Wants to connect", poke: "poke" },
 ];
 
 export const sampleFriends: Person[] = [
-  { id: "alex", name: "Alex", initials: "AL", color: "#B6FF70", meta: "Done today", poke: "off" },
-  { id: "maya", name: "Maya", initials: "MA", color: "#FF9F43", meta: "2 left today", poke: "poke" },
-  { id: "sam", name: "Sam", initials: "SA", color: "#5EE0FF", meta: "5 left · poked today", poke: "sent" },
+  { id: "alex", name: "Alex", initials: "AL", icon: null, color: "#B6FF70", meta: "Done today", poke: "off" },
+  { id: "maya", name: "Maya", initials: "MA", icon: null, color: "#FF9F43", meta: "2 left today", poke: "poke" },
+  { id: "sam", name: "Sam", initials: "SA", icon: null, color: "#5EE0FF", meta: "5 left · poked today", poke: "sent" },
 ];
 
 export const rankings = [

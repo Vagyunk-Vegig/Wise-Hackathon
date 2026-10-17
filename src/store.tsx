@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { acceptFriendship, bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { acceptFriendship, bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
@@ -74,6 +74,7 @@ type Store = {
   acceptRequest: (id: string) => void;
   sendRequest: (id: string) => Promise<void>;
   poke: (id: string) => void;
+  setProfileIcon: (icon: string | null) => Promise<void>;
   setCommitment: (on: boolean) => void;
   showToast: (text: string, tone?: ToastMessage["tone"], icon?: ToastMessage["icon"]) => void;
   dismissToast: () => void;
@@ -177,6 +178,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           streak: 0,
           badges: [],
           initials: initialsFor(username),
+          icon: null,
           color: "#B6FF70",
           streaks: { count: 0 },
         };
@@ -278,7 +280,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
           setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
-          if (item.date === TODAY && item.kind !== "deadline") {
+          if (item.date === TODAY) {
             setDailyTasks((current) => {
               const previous = current[currentUser.id] ?? { done: 0, total: 0 };
               return { ...current, [currentUser.id]: { ...previous, done: previous.done + 1 } };
@@ -366,6 +368,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
         if (helped) setPokeNotice("Your poke helped — +5 XP");
         showToast(helped ? "Your poke helped — +5 XP" : "Poked", "success", "heart");
+      },
+      setProfileIcon: async (icon) => {
+        if (!currentUser || currentUser.icon === icon) return;
+        const previous = currentUser.icon;
+        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, icon } : user)));
+        try {
+          await updateUserIcon(currentUser.id, icon);
+        } catch (error) {
+          setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, icon: previous } : user)));
+          showToast(error instanceof Error ? error.message : "Could not save the icon", "error", "alert");
+        }
       },
       signIn: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

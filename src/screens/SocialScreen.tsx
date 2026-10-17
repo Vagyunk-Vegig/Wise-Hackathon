@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { icons } from "../components/Icons";
-import { Screen, SectionLabel, TopBar } from "../components/ui";
+import { AvatarMark, Screen, SectionLabel, TopBar } from "../components/ui";
 import { toPerson } from "../db";
 import { searchByUsername } from "../search";
 import { colors } from "../theme";
@@ -97,9 +97,7 @@ function PersonRow({ person, action, disabled, onPress }: { person: Person; acti
   return (
     <View style={styles.row}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${person.name} profile`} onPress={() => root.navigate("Profile", { userId: person.id })} style={styles.person}>
-        <View style={styles.avatar}>
-          <Text style={[styles.initials, { color: person.color }]}>{person.initials}</Text>
-        </View>
+        <AvatarMark icon={person.icon} initials={person.initials} size={36} textColor={person.color} background={colors.elevated} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={styles.name}>{person.name}</Text>
           <Text style={styles.meta}>{person.meta}</Text>

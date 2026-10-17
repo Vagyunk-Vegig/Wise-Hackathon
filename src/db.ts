@@ -1,3 +1,4 @@
+import { isProfileIcon } from "./components/Icons";
 import { TODAY } from "./dates";
 import { supabase } from "./supabase";
 import { Category, type Item, type ItemKind, type Person } from "./types";
@@ -12,6 +13,7 @@ export type AppUser = {
   streak: number;
   badges: string[];
   initials: string;
+  icon: string | null;
   color: string;
   streaks: unknown;
 };
@@ -40,6 +42,7 @@ type UserRow = {
   xp: number | string | null;
   streaks: unknown;
   badges: unknown;
+  icon?: string | null;
 };
 
 const categoryValues = new Set<string>(Object.values(Category));
@@ -78,6 +81,7 @@ export function toAppUser(row: UserRow, index: number): AppUser {
     streak: readStreak(row.streaks),
     badges: readBadges(row.badges),
     initials: initialsFor(username),
+    icon: typeof row.icon === "string" && isProfileIcon(row.icon) ? row.icon : null,
     color: COLORS[index % COLORS.length],
     streaks: row.streaks,
   };
@@ -88,6 +92,7 @@ export function toPerson(user: AppUser): Person {
     id: user.id,
     name: user.username,
     initials: user.initials,
+    icon: user.icon,
     color: user.color,
     meta: user.streak > 0 ? `${user.streak} day streak` : "Not started",
     poke: "poke",
@@ -199,9 +204,25 @@ export async function acceptFriendship(id: number) {
   if (error) throw new Error(error.message);
 }
 
+async function selectUsers(columns: string) {
+  const first = await supabase.from("user").select(columns);
+  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
+    return supabase.from("user").select(legacyUserColumns);
+  }
+  return first;
+}
+
+async function selectUser(id: string, columns: string) {
+  const first = await supabase.from("user").select(columns).eq("user_id", id).maybeSingle();
+  if (first.error && columns === userColumns && missingIconColumn(first.error.message)) {
+    return supabase.from("user").select(legacyUserColumns).eq("user_id", id).maybeSingle();
+  }
+  return first;
+}
+
 export async function fetchBoard() {
   const [users, tasks] = await Promise.all([
-    supabase.from("user").select("user_id,username,xp,streaks,badges"),
+    selectUsers(userColumns),
     supabase.from("task").select("id,user_id,title,description,category,task_type"),
   ]);
   if (users.error) throw new Error(users.error.message);
@@ -212,12 +233,27 @@ export async function fetchBoard() {
   };
 }
 
-const userColumns = "user_id,username,xp,streaks,badges";
+const userColumns = "user_id,username,xp,streaks,badges,icon";
+const legacyUserColumns = "user_id,username,xp,streaks,badges";
+
+function missingIconColumn(message: string) {
+  return message.toLowerCase().includes("icon");
+}
 
 async function readUser(id: string) {
-  const { data, error } = await supabase.from("user").select(userColumns).eq("user_id", id).maybeSingle();
+  const { data, error } = await selectUser(id, userColumns);
   if (error) throw new Error(error.message);
   return data ? toAppUser(data as UserRow, 0) : null;
+}
+
+export async function updateUserIcon(id: string, icon: string | null) {
+  const { error } = await supabase.from("user").update({ icon }).eq("user_id", id);
+  if (error) {
+    if (missingIconColumn(error.message)) {
+      throw new Error("The profile icon column is missing. In the Supabase SQL editor, add icon text to the user table.");
+    }
+    throw new Error(error.message);
+  }
 }
 
 export async function insertUser(id: string, username: string) {
@@ -226,6 +262,12 @@ export async function insertUser(id: string, username: string) {
     .insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] })
     .select(userColumns)
     .maybeSingle();
+  if (error && missingIconColumn(error.message)) {
+    const again = await supabase.from("user").insert({ user_id: id, username, xp: 0, streaks: { count: 0 }, badges: [] }).select(legacyUserColumns).maybeSingle();
+    if (again.error) throw new Error(again.error.message);
+    if (!again.data) throw new Error("Could not save the profile.");
+    return toAppUser(again.data as UserRow, 0);
+  }
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Could not save the profile.");
   return toAppUser(data as UserRow, 0);
@@ -238,8 +280,11 @@ export async function ensureUser(id: string, username: string) {
     if (existing.username === name || name === "you") return existing;
     const blank = !existing.username.trim() || existing.username === "User";
     if (!blank) return existing;
-    const { data, error } = await supabase.from("user").update({ username: name }).eq("user_id", id).select(userColumns).maybeSingle();
-    if (error || !data) return existing;
+    const updated = await supabase.from("user").update({ username: name }).eq("user_id", id).select(userColumns).maybeSingle();
+    const data = updated.error && missingIconColumn(updated.error.message)
+      ? (await supabase.from("user").update({ username: name }).eq("user_id", id).select(legacyUserColumns).maybeSingle()).data
+      : updated.data;
+    if (!data) return existing;
     return toAppUser(data as UserRow, 0);
   }
   try {

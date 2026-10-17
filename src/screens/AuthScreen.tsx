@@ -5,8 +5,9 @@ import { colors, radius } from "../theme";
 import { useStore } from "../store";
 
 export function AuthScreen() {
-  const { signIn, signInWithGoogle, showToast } = useStore();
+  const { signIn, signUp, signInWithGoogle, showToast } = useStore();
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,8 +23,8 @@ export function AuthScreen() {
 
   const submit = async () => {
     if (busy) return;
-    if (!email.trim() || password.length < 6) {
-      const message = "Use an email and a password of at least 6 characters.";
+    if (!email.trim() || password.length < 6 || (signUpMode && !username.trim())) {
+      const message = signUpMode && !username.trim() ? "Add a username." : "Use an email and a password of at least 6 characters.";
       setFormError(message);
       showToast(message, "error", "alert");
       return;
@@ -31,9 +32,10 @@ export function AuthScreen() {
     setBusy(true);
     setFormError(null);
     try {
-      await signIn(email.trim(), password);
+      if (signUpMode) await signUp(email.trim(), password, username.trim());
+      else await signIn(email.trim(), password);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not sign in";
+      const message = error instanceof Error ? error.message : signUpMode ? "Could not create the account" : "Could not sign in";
       setFormError(message);
       showToast(message, "error", "alert");
     } finally {
@@ -61,24 +63,23 @@ export function AuthScreen() {
         <View style={{ gap: 8 }}>
           <Text style={styles.mark}>habit.</Text>
           <Text style={styles.title}>{signUpMode ? "Create account" : "Sign in"}</Text>
-          <Text style={styles.sub}>{signUpMode ? "Create your account with Google." : "Use Google, or the email and password for your account."}</Text>
+          <Text style={styles.sub}>{signUpMode ? "Use Google, or a username, email, and password." : "Use Google, or the email and password for your account."}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" onPress={() => void google()} disabled={busy} style={[styles.google, busy && { opacity: 0.7 }]}>
           <Text style={styles.googleMark}>G</Text>
           <Text style={styles.googleText}>{busy ? "Working" : "Continue with Google"}</Text>
         </Pressable>
-        {signUpMode ? null : (
-          <>
-            <Text style={styles.or}>or</Text>
-            <View style={{ gap: 10 }}>
-              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Email" placeholderTextColor={colors.placeholder} style={styles.input} />
-              <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" placeholderTextColor={colors.placeholder} style={styles.input} />
-            </View>
-          </>
-        )}
+        <Text style={styles.or}>or</Text>
+        <View style={{ gap: 10 }}>
+          {signUpMode ? (
+            <TextInput value={username} onChangeText={setUsername} autoCapitalize="none" placeholder="Username" placeholderTextColor={colors.placeholder} style={styles.input} />
+          ) : null}
+          <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Email" placeholderTextColor={colors.placeholder} style={styles.input} />
+          <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" placeholderTextColor={colors.placeholder} style={styles.input} />
+        </View>
         {formError ? <Text style={styles.error}>{formError}</Text> : null}
         <View style={styles.actions}>
-          {signUpMode ? null : <PrimaryButton label={busy ? "Working" : "Sign in"} disabled={busy} onPress={() => void submit()} />}
+          <PrimaryButton label={busy ? "Working" : signUpMode ? "Sign up" : "Sign in"} disabled={busy} onPress={() => void submit()} />
           <SecondaryButton
             label={signUpMode ? "I already have an account" : "Create account"}
             onPress={() => {

@@ -1,8 +1,8 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { icons } from "../components/Icons";
-import { IconButton, PageHeader, Screen } from "../components/ui";
+import { icons, profileIconNames, profileIcons } from "../components/Icons";
+import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
 import { XP_PER_LEVEL } from "../sample";
 import { useStore } from "../store";
@@ -20,7 +20,7 @@ const rows = [
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Profile">>();
-  const { currentUser, users, items, completedCounts } = useStore();
+  const { currentUser, users, items, completedCounts, setProfileIcon } = useStore();
   const requestedId = route.params?.userId;
   const viewingSelf = !requestedId || requestedId === currentUser?.id;
   const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
@@ -47,10 +47,21 @@ export function ProfileScreen() {
           }
         />
         <View style={styles.identity}>
-          <View style={[styles.portrait, { backgroundColor: profile ? colors.accent : colors.surface }]}>
-            <Text style={[styles.initials, profile ? null : { color: colors.text }]}>{profile?.initials ?? "··"}</Text>
-          </View>
+          <AvatarMark icon={profile?.icon ?? null} initials={profile?.initials ?? "··"} size={78} textColor={profile ? colors.onAccent : colors.text} background={profile ? colors.accent : colors.surface} />
           <Text style={styles.name}>{name}</Text>
+          {viewingSelf && profile ? (
+            <View style={styles.iconRow}>
+              {profileIconNames.map((iconName) => {
+                const Icon = profileIcons[iconName];
+                const selected = profile.icon === iconName;
+                return (
+                  <Pressable key={iconName} accessibilityRole="button" accessibilityLabel={`${iconName} icon`} onPress={() => void setProfileIcon(selected ? null : iconName)} style={[styles.iconChoice, selected && styles.iconChoiceOn]}>
+                    <Icon size={18} color={selected ? colors.onAccent : colors.text} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
           {profile ? null : <Text style={styles.age}>{viewingSelf ? "Sign in to save a profile." : "This profile is unavailable."}</Text>}
         </View>
         <View style={{ gap: 10, alignItems: "center" }}>
@@ -108,6 +119,9 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 24, gap: 20 },
   identity: { alignItems: "center", gap: 8 },
+  iconRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 4 },
+  iconChoice: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  iconChoiceOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   portrait: { width: 78, height: 78, borderRadius: 39, alignItems: "center", justifyContent: "center" },
   initials: { color: colors.onAccent, fontSize: 26, fontWeight: "800" },
   name: { color: colors.text, fontSize: 26, fontWeight: "700" },

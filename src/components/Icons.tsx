@@ -46,6 +46,24 @@ export const categoryMeta: Record<Category, { color: string; Icon: typeof BookOp
   [Category.Other]: { color: colors.other, Icon: ListMinus },
 };
 
+export const profileIconNames = ["sun", "flame", "leaf", "star", "heart", "sunrise", "sparkles", "bell"] as const;
+export type ProfileIconName = (typeof profileIconNames)[number];
+
+export const profileIcons: Record<ProfileIconName, typeof Sun> = {
+  sun: Sun,
+  flame: Flame,
+  leaf: Leaf,
+  star: Star,
+  heart: Heart,
+  sunrise: Sunrise,
+  sparkles: Sparkles,
+  bell: Bell,
+};
+
+export function isProfileIcon(value: string): value is ProfileIconName {
+  return (profileIconNames as readonly string[]).includes(value);
+}
+
 export const icons = {
   Sun,
   CalendarDays,
