@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ActivityCalendar } from "../components/ActivityCalendar";
 import { icons } from "../components/Icons";
 import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
@@ -8,19 +9,10 @@ import { XP_PER_LEVEL } from "../sample";
 import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
-const heat = [colors.heat4, colors.heat3, colors.heat2, colors.heat1];
-const rows = [
-  [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-  [2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
-  [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-  [2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 3],
-  [0, 1, 2, 3, 0, 1, 2, 3, 0, 3, 3, 3],
-];
-
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Profile">>();
-  const { currentUser, users, items, completedCounts } = useStore();
+  const { currentUser, users, items, completedCounts, activityCounts } = useStore();
   const requestedId = route.params?.userId;
   const viewingSelf = !requestedId || requestedId === currentUser?.id;
   const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
@@ -33,7 +25,7 @@ export function ProfileScreen() {
     : completedCounts[profile?.id ?? ""] ?? 0;
   const name = profile?.username ?? "No profile";
   const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
-  const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));
+  const activity = profile ? activityCounts[profile.id] ?? {} : {};
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.body}>
@@ -73,15 +65,7 @@ export function ProfileScreen() {
         </View>
         <View style={{ gap: 12 }}>
           <Text style={styles.block}>Activity</Text>
-          <View style={styles.heatCard}>
-            {activity.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.heatRow}>
-                {row.map((level, cell) => (
-                  <View key={cell} style={[styles.cell, { backgroundColor: heat[level] }]} />
-                ))}
-              </View>
-            ))}
-          </View>
+          <ActivityCalendar counts={activity} />
         </View>
         <View style={{ gap: 14 }}>
           <Text style={styles.block}>Achievements</Text>
@@ -120,9 +104,6 @@ const styles = StyleSheet.create({
   stat: { flex: 1, minWidth: 0, height: 48, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   statText: { flexShrink: 1, color: colors.text, fontSize: 12, fontWeight: "700" },
   block: { color: colors.text, fontSize: 17, fontWeight: "700" },
-  heatCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 16, alignItems: "center", gap: 3 },
-  heatRow: { flexDirection: "row", gap: 3 },
-  cell: { width: 14, height: 14, borderRadius: 3 },
   badges: { flexDirection: "row", gap: 6 },
   badge: { flex: 1, alignItems: "center", gap: 8 },
   ring: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
