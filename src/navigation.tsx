@@ -45,7 +45,7 @@ function PlanNavigator() {
   );
 }
 
-function AppTabs({ state, navigation }: { state: { index: number; routes: { name: string }[] }; navigation: { navigate: (name: string) => void } }) {
+function AppTabs({ state, navigation }: { state: { index: number; routes: { name: string }[] }; navigation: { navigate: (name: string, params?: object) => void } }) {
   const insets = useSafeAreaInsets();
   const root = useRootNav();
   const active = state.routes[state.index]?.name;
@@ -71,7 +71,11 @@ function AppTabs({ state, navigation }: { state: { index: number; routes: { name
         }
         const on = active === item.name;
         return (
-          <Pressable key={item.name} style={styles.slot} onPress={() => navigation.navigate(item.name)}>
+          <Pressable
+            key={item.name}
+            style={styles.slot}
+            onPress={() => navigation.navigate(item.name, item.name === "Plan" ? { screen: "PlanHome" } : undefined)}
+          >
             <item.Icon size={20} color={on ? colors.accent : colors.muted} />
             <Text style={[styles.label, on && { color: colors.accent }]}>{item.label}</Text>
           </Pressable>

@@ -136,11 +136,11 @@ function Calendar({
           <View style={{ alignItems: "center", gap: 12, paddingVertical: 8 }}>
             <icons.CalendarPlus size={24} color={colors.accent} />
             <Text style={styles.emptyTitle}>Nothing planned for this day.</Text>
-            <SecondaryButton label="+ Add task" onPress={onCreate} />
           </View>
         ) : (
           dayItems.map((item) => <ItemRow key={item.id} item={item} />)
         )}
+        <SecondaryButton label="+ Add task" onPress={onCreate} />
       </View>
     </View>
   );
