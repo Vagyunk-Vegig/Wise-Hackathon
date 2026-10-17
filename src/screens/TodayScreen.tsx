@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { DayList } from "../components/DayList";
 import { icons } from "../components/Icons";
 import { TomorrowBanner } from "../components/TomorrowBanner";
@@ -10,16 +10,13 @@ import { useStore } from "../store";
 
 export function TodayScreen() {
   const navigation = useRootNav();
-  const { items, streak, completeItem, replayOnboarding } = useStore();
+  const { items, streak, completeItem } = useStore();
   const today = items.filter((item) => item.date === TODAY);
 
   return (
     <Screen>
       <TopBar streak={streak} onAvatar={() => navigation.navigate("Profile")} onSettings={() => navigation.navigate("Settings")} />
       <ScrollView contentContainerStyle={today.length === 0 ? { flexGrow: 1, paddingHorizontal: 16 } : { paddingHorizontal: 16, paddingBottom: 24, gap: 16 }}>
-        <Pressable onPress={replayOnboarding} style={styles.test} accessibilityLabel="Test onboarding">
-          <Text style={styles.testLabel}>Test onboarding</Text>
-        </Pressable>
         <TomorrowBanner onPress={() => navigation.navigate("Create", { date: shiftDate(TODAY, 1), kind: "goal" })} />
         {today.length === 0 ? (
           <View style={{ flex: 1 }}>
@@ -49,8 +46,6 @@ export function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  test: { alignSelf: "flex-start", marginTop: 12, borderWidth: 1, borderStyle: "dashed", borderColor: colors.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  testLabel: { color: colors.accent, fontSize: 12, fontWeight: "700" },
   emptyWrap: { flex: 1, justifyContent: "space-between", paddingBottom: 8 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 16 },
   ring: { width: 64, height: 64, borderRadius: 32, borderWidth: 1, borderStyle: "dashed", borderColor: colors.euro, alignItems: "center", justifyContent: "center" },

@@ -29,7 +29,7 @@ function money(amount: number) {
 
 export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { signedIn, signIn, signUp, signInWithGoogle, signOut, finishOnboarding, showToast, onboardingReplay } = useStore();
+  const { signedIn, signIn, signUp, signInWithGoogle, signOut, finishOnboarding, showToast } = useStore();
   const [step, setStep] = useState<Step>("welcome");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -43,9 +43,8 @@ export function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (onboardingReplay) return;
     if (signedIn && (step === "welcome" || step === "create" || step === "signin")) setStep("intro");
-  }, [signedIn, step, onboardingReplay]);
+  }, [signedIn, step]);
 
   const filledHabits = habits.map((habit) => habit.trim()).filter(Boolean);
   const accountReady = username.trim().length > 0 && email.includes("@") && password.length >= 6;
@@ -71,7 +70,7 @@ export function OnboardingScreen() {
   const back = () => {
     if (step === "create" || step === "signin") setStep("welcome");
     else if (step === "intro") {
-      if (signedIn && !onboardingReplay) void run(async () => { await signOut(); setStep("welcome"); });
+      if (signedIn) void run(async () => { await signOut(); setStep("welcome"); });
       else setStep("welcome");
     } else if (step === "habits") setStep("intro");
     else if (step === "penalty") setStep("habits");
@@ -137,7 +136,7 @@ export function OnboardingScreen() {
         <View style={styles.actions}>
           {step === "welcome" ? (
             <>
-              <Pressable style={styles.primary} disabled={busy} onPress={() => (signedIn && onboardingReplay ? setStep("intro") : run(signInWithGoogle))}>
+              <Pressable style={styles.primary} disabled={busy} onPress={() => run(signInWithGoogle)}>
                 <Text style={styles.g}>G</Text>
                 <Text style={styles.primaryText}>Continue with Google</Text>
               </Pressable>
@@ -154,7 +153,7 @@ export function OnboardingScreen() {
               <Pressable
                 style={[styles.primary, !accountReady && styles.disabled]}
                 disabled={!accountReady || busy}
-                onPress={() => (signedIn && onboardingReplay ? setStep("intro") : run(() => signUp(email.trim(), password, username.trim())))}
+                onPress={() => run(() => signUp(email.trim(), password, username.trim()))}
               >
                 <Text style={[styles.primaryText, !accountReady && styles.disabledText]}>Sign up</Text>
               </Pressable>
@@ -168,7 +167,7 @@ export function OnboardingScreen() {
               <Pressable
                 style={[styles.primary, !signInReady && styles.disabled]}
                 disabled={!signInReady || busy}
-                onPress={() => (signedIn && onboardingReplay ? setStep("intro") : run(async () => { await signIn(email.trim(), password); if (onboardingReplay) setStep("intro"); }))}
+                onPress={() => run(() => signIn(email.trim(), password))}
               >
                 <Text style={[styles.primaryText, !signInReady && styles.disabledText]}>Sign in</Text>
               </Pressable>

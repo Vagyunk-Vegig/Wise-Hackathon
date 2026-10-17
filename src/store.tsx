@@ -42,11 +42,6 @@ function writeOnboarding(userId: string, value: SavedOnboarding) {
   else onboardingMemory.set(onboardingKey(userId), raw);
 }
 
-function clearOnboarding(userId: string) {
-  if (typeof localStorage !== "undefined") localStorage.removeItem(onboardingKey(userId));
-  else onboardingMemory.delete(onboardingKey(userId));
-}
-
 function categoryForHabit(title: string) {
   const key = title.toLowerCase();
   if (key.includes("water")) return Category.Hygiene;
@@ -103,10 +98,8 @@ type Store = {
   nudgeTime: string;
   onboardingComplete: boolean;
   onboardingReady: boolean;
-  onboardingReplay: boolean;
   finishOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
   updateOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
-  replayOnboarding: () => void;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -128,8 +121,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [nudgeTime, setNudgeTime] = useState("17:00");
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [onboardingReady, setOnboardingReady] = useState(false);
-  const [onboardingReplay, setOnboardingReplay] = useState(false);
-  const replaying = useRef(false);
   const rows = useRef(new Map<string, TaskRow>());
 
   const showToast: Store["showToast"] = (text, tone = "success", icon = "check") => {
@@ -206,14 +197,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!cancelled) {
         publish(visibleUsers, ownTasks, sessionId, friendships);
         const remote = data.session?.user.user_metadata?.onboarding as SavedOnboarding | undefined;
-        const saved = replaying.current ? null : readOnboarding(sessionId) ?? (remote?.complete && Array.isArray(remote.habits) ? remote : null);
+        const saved = readOnboarding(sessionId) ?? (remote?.complete && Array.isArray(remote.habits) ? remote : null);
         setPenaltyFt(saved?.penaltyFt ?? 800);
         setFixedHabits(saved?.habits ?? []);
         setRemindersOn(saved?.reminders ?? false);
         setDailyCount(saved?.dailyCount ?? 3);
         setNudgeTime(saved?.nudgeTime ?? "17:00");
         setOnboardingComplete(Boolean(saved?.complete));
-        setOnboardingReplay(replaying.current);
         setOnboardingReady(true);
         setSignedIn(true);
         setAuthReady(true);
@@ -260,7 +250,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       nudgeTime,
       onboardingComplete,
       onboardingReady,
-      onboardingReplay,
       commitmentOn,
       toast,
       showToast,
@@ -354,8 +343,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setRemindersOn(reminders);
         setDailyCount(count);
         setNudgeTime(time);
-        replaying.current = false;
-        setOnboardingReplay(false);
         setOnboardingComplete(true);
       },
       updateOnboarding: async ({ penaltyFt: amount, habits, reminders, dailyCount: count, nudgeTime: time }) => {
@@ -383,20 +370,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setDailyCount(count);
         setNudgeTime(time);
         setOnboardingComplete(true);
-      },
-      replayOnboarding: () => {
-        replaying.current = true;
-        if (currentUser) {
-          clearOnboarding(currentUser.id);
-          void supabase.auth.updateUser({ data: { onboarding: null } }).catch(() => undefined);
-        }
-        setPenaltyFt(800);
-        setFixedHabits([]);
-        setRemindersOn(false);
-        setDailyCount(3);
-        setNudgeTime("17:00");
-        setOnboardingReplay(true);
-        setOnboardingComplete(false);
       },
       signInWithGoogle: async () => {
         const redirectTo = webRedirectOrigin();
@@ -431,7 +404,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, users, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, onboardingReplay, commitmentOn, toast]);
+  }, [items, friends, requests, users, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, commitmentOn, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }
