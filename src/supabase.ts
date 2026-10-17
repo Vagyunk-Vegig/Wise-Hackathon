@@ -28,7 +28,7 @@ const globalStore = globalThis as typeof globalThis & { __habitSupabase?: Supaba
 export const supabase =
   globalStore.__habitSupabase ??
   createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { storage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+    auth: { storage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: true },
   });
 
 globalStore.__habitSupabase = supabase;

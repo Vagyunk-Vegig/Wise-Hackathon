@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { bumpStreak, ensureUser, fetchBoard, initialsFor, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser } from "./db";
+import { bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
 import type { Item, Person, ToastMessage } from "./types";
@@ -47,6 +47,7 @@ type Store = {
   dismissToast: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -68,14 +69,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setToast({ id: Date.now(), text, tone, icon });
   };
 
-  const publish = (boardUsers: AppUser[], boardTasks: TaskRow[], preferredId: string | null) => {
+  const publish = (boardUsers: AppUser[], boardTasks: TaskRow[], preferredId: string | null, friendships: FriendshipRow[] = []) => {
     rows.current = new Map(boardTasks.map((row) => [String(row.id), row]));
     setItems(boardTasks.map(rowToItem));
     setUsers(boardUsers);
     const current = preferredId ? boardUsers.find((user) => user.id === preferredId) ?? null : null;
     setCurrentUserId(current?.id ?? null);
-    setFriends(boardUsers.filter((user) => user.id !== current?.id).map(toPerson));
-    setRequests([]);
+    const friendIds = new Set<string>();
+    const requestIds = new Set<string>();
+    for (const row of friendships) {
+      if (!current) continue;
+      if (row.user_sender === current.id) {
+        if (row.is_accepted) friendIds.add(row.user_receiver);
+      } else if (row.user_receiver === current.id) {
+        if (row.is_accepted) friendIds.add(row.user_sender);
+        else requestIds.add(row.user_sender);
+      }
+    }
+    setFriends(boardUsers.filter((user) => friendIds.has(user.id)).map(toPerson));
+    setRequests(boardUsers.filter((user) => requestIds.has(user.id)).map(toPerson));
   };
 
   useEffect(() => {
@@ -93,8 +105,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       let board = await fetchBoard();
-      const metadataName = data.session?.user.user_metadata?.username;
-      const username = signupName || (typeof metadataName === "string" && metadataName.trim()) || data.session?.user.email?.split("@")[0] || "you";
+      const metadata = data.session?.user.user_metadata;
+      const metadataName = [metadata?.username, metadata?.full_name, metadata?.name].find((value) => typeof value === "string" && value.trim());
+      const username = signupName || (typeof metadataName === "string" ? metadataName.trim() : "") || data.session?.user.email?.split("@")[0] || "you";
       let profile: AppUser;
       try {
         profile = await ensureUser(sessionId, username);
@@ -115,8 +128,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       board = { ...board, users: [profile, ...board.users.filter((user) => user.id !== sessionId)] };
       const visibleUsers = board.users.filter((user) => user.id !== PROBE_USER && user.username !== "probe");
       const ownTasks = board.tasks.filter((task) => task.user_id === sessionId);
+      const friendships = await fetchFriendships().catch(() => []);
       if (!cancelled) {
-        publish(visibleUsers, ownTasks, sessionId);
+        publish(visibleUsers, ownTasks, sessionId, friendships);
         setSignedIn(true);
         setAuthReady(true);
       }
@@ -222,6 +236,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw new Error(error.message);
         showToast("Signed in");
+      },
+      signInWithGoogle: async () => {
+        const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo },
+        });
+        if (error) throw new Error(error.message);
       },
       signUp: async (email, password, username) => {
         signupName = username;

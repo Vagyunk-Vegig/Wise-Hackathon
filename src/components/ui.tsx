@@ -120,7 +120,7 @@ export function QuietRow({ title }: { title: string }) {
 
 export function PrimaryButton({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[styles.primary, disabled && { opacity: 0.7 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={[styles.primary, disabled && { opacity: 0.7 }]}>
       <Text style={styles.primaryText}>{label}</Text>
     </Pressable>
   );
@@ -128,7 +128,7 @@ export function PrimaryButton({ label, onPress, disabled }: { label: string; onP
 
 export function SecondaryButton({ label, onPress }: { label: string; onPress?: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.secondary}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.secondary}>
       <Text style={styles.secondaryText}>{label}</Text>
     </Pressable>
   );

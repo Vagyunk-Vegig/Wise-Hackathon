@@ -164,6 +164,19 @@ export function rowToItem(row: TaskRow): Item {
   };
 }
 
+export type FriendshipRow = {
+  id: number;
+  is_accepted: boolean | null;
+  user_sender: string;
+  user_receiver: string;
+};
+
+export async function fetchFriendships() {
+  const { data, error } = await supabase.from("friendship").select("id,is_accepted,user_sender,user_receiver");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FriendshipRow[];
+}
+
 export async function fetchBoard() {
   const [users, tasks] = await Promise.all([
     supabase.from("user").select("user_id,username,xp,streaks,badges"),
