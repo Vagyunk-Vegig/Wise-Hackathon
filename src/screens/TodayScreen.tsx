@@ -3,6 +3,7 @@ import { DayList } from "../components/DayList";
 import { icons } from "../components/Icons";
 import { PrimaryButton, Screen, TopBar } from "../components/ui";
 import { TODAY } from "../dates";
+import { itemsForDate } from "../schedule";
 import { colors } from "../theme";
 import { useRootNav } from "../routes";
 import { useStore } from "../store";
@@ -10,7 +11,7 @@ import { useStore } from "../store";
 export function TodayScreen() {
   const navigation = useRootNav();
   const { items, streak, completeItem } = useStore();
-  const today = items.filter((item) => item.date === TODAY);
+  const today = itemsForDate(items, TODAY);
 
   return (
     <Screen>
@@ -36,7 +37,7 @@ export function TodayScreen() {
             />
           </View>
         ) : (
-          <DayList date={TODAY} items={today} onToggle={completeItem} />
+          <DayList date={TODAY} items={today} onToggle={(id) => completeItem(id, TODAY)} />
         )}
       </ScrollView>
     </Screen>

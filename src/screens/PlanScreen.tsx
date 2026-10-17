@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
 import { IconButton, ItemRow, Screen, SecondaryButton, SectionLabel, TopBar } from "../components/ui";
 import { isoDate, monthGrid, shortDate, TODAY } from "../dates";
-import { habitDots, taskDots } from "../sample";
+import { hasDatedItemOn, hasHabitOn, itemsForDate } from "../schedule";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import { useRootNav, type PlanStackParamList } from "../routes";
@@ -93,7 +93,7 @@ function Calendar({
 }) {
   const cells = monthGrid(cursor.year, cursor.month);
   const monthName = new Date(Date.UTC(cursor.year, cursor.month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-  const dayItems = items.filter((item) => item.date === selected);
+  const dayItems = itemsForDate(items, selected);
 
   return (
     <View style={{ gap: 10 }}>
@@ -117,8 +117,8 @@ function Calendar({
           const iso = isoDate(cursor.year, cursor.month, day);
           const isToday = iso === TODAY;
           const isSelected = iso === selected;
-          const habit = habitDots.includes(iso) || items.some((item) => item.date === iso && item.kind === "habit");
-          const task = taskDots.includes(iso) || items.some((item) => item.date === iso && item.kind !== "habit");
+          const habit = hasHabitOn(items, iso);
+          const task = hasDatedItemOn(items, iso);
           return (
             <Pressable key={iso} onPress={() => onSelect(iso)} style={[styles.cell, isSelected && styles.cellSelected, isToday && !isSelected && styles.cellToday]}>
               <Text style={[styles.cellText, isSelected && { color: colors.onAccent }]}>{day}</Text>

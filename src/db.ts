@@ -20,6 +20,7 @@ type TaskMeta = {
   note: string;
   date: string;
   done: boolean;
+  doneDates: string[];
   xp: number;
   money: boolean;
   category: Category;
@@ -112,10 +113,17 @@ function taskTypeFor(kind: ItemKind) {
   return "daily";
 }
 
-function expirationDate(setup: string) {
+function expirationDate(kind: ItemKind, setup: string) {
+  if (kind === "habit") return "2099-12-31";
   const today = TODAY;
   const next = shiftDate(setup, 1);
   return next > today ? next : today;
+}
+
+function readDoneDates(value: unknown, done: boolean, date: string) {
+  const listed = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry)) : [];
+  if (done && !listed.includes(date)) listed.push(date);
+  return listed;
 }
 
 function decodeMeta(description: string | null, taskType: string, category: string): TaskMeta {
@@ -123,12 +131,15 @@ function decodeMeta(description: string | null, taskType: string, category: stri
     try {
       const parsed = JSON.parse(description.slice(META.length)) as Partial<TaskMeta>;
       const kind = kindFor(taskType);
+      const date = typeof parsed.date === "string" ? parsed.date : TODAY;
+      const done = Boolean(parsed.done);
       return {
         note: typeof parsed.note === "string" ? parsed.note : "",
-        date: typeof parsed.date === "string" ? parsed.date : TODAY,
-        done: Boolean(parsed.done),
-        xp: typeof parsed.xp === "number" ? parsed.xp : xpFor(kind),
-        money: typeof parsed.money === "boolean" ? parsed.money : kind !== "deadline",
+        date,
+        done,
+        doneDates: readDoneDates(parsed.doneDates, done && kind === "habit", date),
+        xp: xpFor(kind),
+        money: kind !== "deadline",
         category: parsed.category && isCategory(parsed.category) ? parsed.category : isCategory(category) ? category : Category.Other,
       };
     } catch {
@@ -140,6 +151,7 @@ function decodeMeta(description: string | null, taskType: string, category: stri
     note: description ?? "",
     date: TODAY,
     done: false,
+    doneDates: [],
     xp: xpFor(kind),
     money: kind !== "deadline",
     category: isCategory(category) ? category : Category.Other,
@@ -161,6 +173,7 @@ export function rowToItem(row: TaskRow): Item {
     money: meta.money,
     date: meta.date,
     done: meta.done,
+    doneDates: meta.doneDates,
   };
 }
 
@@ -228,6 +241,7 @@ export async function insertTask(input: {
     note: input.note,
     date: input.date,
     done: false,
+    doneDates: [],
     xp: xpFor(input.kind),
     money: input.kind !== "deadline",
     category: input.category,
@@ -241,7 +255,7 @@ export async function insertTask(input: {
       category: input.category,
       task_type: taskTypeFor(input.kind),
       setup_date: input.date,
-      expiration_date: expirationDate(input.date),
+      expiration_date: expirationDate(input.kind, input.date),
     })
     .select("id,user_id,title,description,category,task_type")
     .single();
@@ -257,10 +271,17 @@ export async function insertTask(input: {
   return data as TaskRow;
 }
 
-export async function saveTaskDone(row: TaskRow, done: boolean) {
+export async function saveTaskDone(row: TaskRow, done: boolean, occurrenceDate?: string) {
   const meta = decodeMeta(row.description, row.task_type, row.category);
-  const { error } = await supabase.from("task").update({ description: encodeMeta({ ...meta, done }) }).eq("id", row.id);
+  const kind = kindFor(row.task_type);
+  const next: TaskMeta =
+    kind === "habit" && occurrenceDate
+      ? { ...meta, doneDates: meta.doneDates.includes(occurrenceDate) ? meta.doneDates : [...meta.doneDates, occurrenceDate] }
+      : { ...meta, done };
+  const description = encodeMeta(next);
+  const { error } = await supabase.from("task").update({ description }).eq("id", row.id);
   if (error) throw new Error(error.message);
+  return { ...row, description };
 }
 
 export function bumpStreak(current: unknown, today: string) {

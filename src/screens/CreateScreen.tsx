@@ -232,8 +232,8 @@ const styles = StyleSheet.create({
   inputError: { borderColor: colors.streak },
   dateInput: { flexDirection: "row", alignItems: "center" },
   dateOpen: { borderColor: colors.accent },
-  sheetRoot: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
-  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  sheetRoot: { ...StyleSheet.absoluteFill, justifyContent: "flex-end" },
+  sheetBackdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.card,
