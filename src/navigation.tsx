@@ -7,12 +7,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { icons } from "./components/Icons";
 import { Toast } from "./components/Toast";
 import { CommitmentScreen } from "./screens/CommitmentScreen";
+import { NotificationsScreen } from "./screens/NotificationsScreen";
 import { CreateScreen } from "./screens/CreateScreen";
 import { DayScreen } from "./screens/DayScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { PlanScreen } from "./screens/PlanScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
-import { AuthScreen } from "./screens/AuthScreen";
+import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SocialScreen } from "./screens/SocialScreen";
 import { TodayScreen } from "./screens/TodayScreen";
@@ -97,18 +98,18 @@ function MainTabs() {
 }
 
 export function AppNavigation() {
-  const { toast, dismissToast, signedIn, authReady } = useStore();
+  const { toast, dismissToast, signedIn, authReady, onboardingComplete, onboardingReady } = useStore();
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(dismissToast, 2400);
     return () => clearTimeout(timer);
   }, [toast, dismissToast]);
 
-  if (!authReady) return null;
-  if (!signedIn) {
+  if (!authReady || (signedIn && !onboardingReady)) return null;
+  if (!onboardingComplete) {
     return (
       <>
-        <AuthScreen />
+        <OnboardingScreen />
         {toast ? <Toast toast={toast} /> : null}
       </>
     );
@@ -122,6 +123,7 @@ export function AppNavigation() {
         <Root.Screen name="Profile" component={ProfileScreen} />
         <Root.Screen name="Settings" component={SettingsScreen} />
         <Root.Screen name="Commitment" component={CommitmentScreen} />
+        <Root.Screen name="Notifications" component={NotificationsScreen} />
       </Root.Navigator>
       {toast ? <Toast toast={toast} /> : null}
     </NavigationContainer>

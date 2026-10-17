@@ -30,6 +30,7 @@ export function SettingsScreen() {
               key={row.key}
               onPress={() => {
                 if (row.key === "commitment") navigation.navigate("Commitment");
+                else if (row.key === "notes") navigation.navigate("Notifications");
                 else if (row.key === "logout") {
                   void signOut().catch((error: unknown) => {
                     showToast(error instanceof Error ? error.message : "Could not sign out", "error", "alert");

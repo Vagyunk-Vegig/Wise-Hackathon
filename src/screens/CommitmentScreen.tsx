@@ -1,23 +1,47 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
+import { SnapSlider } from "../components/SnapSlider";
 import { PageHeader, PrimaryButton, Screen, SecondaryButton } from "../components/ui";
-import { PENALTY_FT } from "../sample";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
-const rules = [
-  ["Amount", `${PENALTY_FT} Ft / missed task`],
-  ["Destination", "Charity · saved"],
-  ["Eligible", "Work tasks"],
-  ["Cutoff", "23:59 · Budapest"],
-];
-
 export function CommitmentScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { commitmentOn, setCommitment, showToast } = useStore();
+  const { commitmentOn, setCommitment, showToast, penaltyFt, dailyCount, fixedHabits, remindersOn, nudgeTime, updateOnboarding } = useStore();
+  const [penalty, setPenalty] = useState(penaltyFt);
+  const [count, setCount] = useState(dailyCount);
+  const [saving, setSaving] = useState(false);
+  const rules = [
+    ["Amount", `${penalty} Ft / missed task`],
+    ["Tasks per day", String(count)],
+    ["Destination", "Charity · saved"],
+    ["Eligible", "Work tasks"],
+    ["Cutoff", "23:59 · Budapest"],
+  ];
+
+  const enable = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateOnboarding({
+        penaltyFt: penalty,
+        habits: fixedHabits,
+        reminders: remindersOn,
+        dailyCount: count,
+        nudgeTime,
+      });
+      setCommitment(true);
+      showToast("Calculation on. No money moves in this build.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not save", "error", "alert");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Screen>
@@ -38,11 +62,29 @@ export function CommitmentScreen() {
               </View>
             ))}
           </View>
+          <View style={styles.adjust}>
+            <Text style={styles.adjustValue}>{count}</Text>
+            <Text style={styles.adjustLabel}>Tasks per day</Text>
+            <SnapSlider min={0} max={6} value={count} onChange={setCount} label="Tasks per day" />
+            <View style={styles.ends}>
+              <Text style={styles.adjustLabel}>0</Text>
+              <Text style={styles.adjustLabel}>6</Text>
+            </View>
+          </View>
+          <View style={styles.stepper}>
+            <Pressable style={styles.step} onPress={() => setPenalty((current) => Math.max(100, current - 100))} accessibilityLabel="Decrease penalty">
+              <icons.Minus size={18} color={colors.text} />
+            </Pressable>
+            <Text style={styles.penalty}>{penalty} Ft</Text>
+            <Pressable style={styles.step} onPress={() => setPenalty((current) => current + 100)} accessibilityLabel="Increase penalty">
+              <icons.Plus size={18} color={colors.text} />
+            </Pressable>
+          </View>
           <View style={styles.card}>
             <View style={styles.cardHead}>
               <Text style={styles.cardTitle}>At risk tonight</Text>
               <View style={styles.chip}>
-                <Text style={styles.chipText}>{PENALTY_FT} Ft</Text>
+                <Text style={styles.chipText}>{penalty} Ft</Text>
               </View>
             </View>
             <Text style={styles.cardMeta}>Finish project report is still open</Text>
@@ -56,13 +98,7 @@ export function CommitmentScreen() {
           </View>
         </View>
         <View style={{ gap: 8 }}>
-          <PrimaryButton
-            label="Enable calculation"
-            onPress={() => {
-              setCommitment(true);
-              showToast("Calculation on. No money moves in this build.");
-            }}
-          />
+          <PrimaryButton label={saving ? "Saving" : "Enable calculation"} onPress={enable} disabled={saving} />
           <SecondaryButton
             label="Keep off"
             onPress={() => {
@@ -92,4 +128,11 @@ const styles = StyleSheet.create({
   bullet: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   lock: { height: 44, flexDirection: "row", alignItems: "center", gap: 8 },
   lockText: { color: colors.placeholder, fontSize: 12 },
+  adjust: { gap: 8 },
+  adjustValue: { color: colors.text, fontSize: 40, fontWeight: "700", textAlign: "center" },
+  adjustLabel: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
+  ends: { flexDirection: "row", justifyContent: "space-between" },
+  stepper: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  step: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.elevated, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  penalty: { color: colors.text, fontSize: 28, fontWeight: "700" },
 });

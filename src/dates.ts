@@ -26,6 +26,12 @@ export function longDate(iso: string) {
   return `${weekday}, ${MONTHS[month - 1]} ${day}, ${year}`;
 }
 
+export function shiftDate(iso: string, days: number) {
+  const { year, month, day } = parts(iso);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return isoDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+}
+
 export function daysFromToday(iso: string) {
   const a = parts(TODAY);
   const b = parts(iso);

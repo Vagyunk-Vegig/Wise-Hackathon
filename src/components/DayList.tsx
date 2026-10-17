@@ -3,12 +3,13 @@ import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from "
 import { PENALTY_FT } from "../sample";
 import { moneyLabel, shortDate, TODAY } from "../dates";
 import { colors } from "../theme";
+import { useStore } from "../store";
 import type { Item } from "../types";
 import { icons } from "./Icons";
 import { ItemRow, QuietRow, SectionLabel } from "./ui";
 
-export function atRisk(items: Item[]) {
-  return items.filter((item) => item.money && !item.done).length * PENALTY_FT;
+export function atRisk(items: Item[], penalty = PENALTY_FT) {
+  return items.filter((item) => item.money && !item.done).length * penalty;
 }
 
 function dayIsClear(items: Item[]) {
@@ -77,6 +78,7 @@ export function DayList({
   onToggle?: (id: string) => void;
   empty?: React.ReactNode;
 }) {
+  const { penaltyFt } = useStore();
   const goals = items.filter((item) => item.kind === "goal");
   const habits = items.filter((item) => item.kind === "habit");
   const deadlines = items.filter((item) => item.kind === "deadline");
@@ -99,7 +101,7 @@ export function DayList({
     <View style={styles.list}>
       <View style={styles.hero}>
         <Text style={styles.date}>{label}</Text>
-        {dayIsClear(items) ? <ClearMark /> : <Text style={styles.money}>{moneyLabel(atRisk(items))}</Text>}
+        {dayIsClear(items) ? <ClearMark /> : <Text style={styles.money}>{moneyLabel(atRisk(items, penaltyFt))}</Text>}
       </View>
       <View style={{ gap: 16 }}>
         <View style={{ gap: 8 }}>
