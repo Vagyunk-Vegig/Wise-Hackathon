@@ -1,24 +1,47 @@
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { icons } from "../components/Icons";
 import { Screen, SectionLabel } from "../components/ui";
+import { toPerson } from "../db";
+import { searchByUsername } from "../search";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import type { Person } from "../types";
 
 export function SocialScreen() {
-  const { requests, friends, acceptRequest, poke } = useStore();
+  const { requests, friends, users, currentUser, acceptRequest, poke } = useStore();
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => searchByUsername(users, query, currentUser?.id).map(toPerson), [users, query, currentUser?.id]);
+  const searching = query.trim().length > 0;
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View>
           <Text style={styles.title}>Social</Text>
           <Text style={styles.sub}>Friends and pokes</Text>
         </View>
         <View style={styles.search}>
           <icons.Search size={17} color={colors.muted} />
-          <TextInput placeholder="Username or invite link" placeholderTextColor={colors.muted} style={styles.input} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="Search by username"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+          />
         </View>
+        {searching ? (
+          <View style={{ gap: 8 }}>
+            <SectionLabel title="PEOPLE" />
+            {matches.length === 0 ? <Text style={styles.meta}>No users match that name.</Text> : null}
+            {matches.map((person) => (
+              <PersonRow key={person.id} person={person} />
+            ))}
+          </View>
+        ) : null}
         {requests.length > 0 ? (
           <View style={{ gap: 8 }}>
             <SectionLabel title="REQUESTS" />
@@ -49,7 +72,7 @@ export function SocialScreen() {
   );
 }
 
-function PersonRow({ person, action, disabled, onPress }: { person: Person; action: string; disabled?: boolean; onPress: () => void }) {
+function PersonRow({ person, action, disabled, onPress }: { person: Person; action?: string; disabled?: boolean; onPress?: () => void }) {
   return (
     <View style={styles.row}>
       <View style={styles.avatar}>
@@ -59,9 +82,11 @@ function PersonRow({ person, action, disabled, onPress }: { person: Person; acti
         <Text style={styles.name}>{person.name}</Text>
         <Text style={styles.meta}>{person.meta}</Text>
       </View>
-      <Pressable onPress={onPress} disabled={disabled} style={[styles.pill, disabled && styles.pillOff]}>
-        <Text style={[styles.pillText, disabled && { color: colors.placeholder }]}>{action}</Text>
-      </Pressable>
+      {action ? (
+        <Pressable onPress={onPress} disabled={disabled} style={[styles.pill, disabled && styles.pillOff]}>
+          <Text style={[styles.pillText, disabled && { color: colors.placeholder }]}>{action}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
