@@ -24,7 +24,7 @@ export function IconButton({ onPress, children }: { onPress?: () => void; childr
 export function AvatarMark({ icon, initials, size, textColor, background }: { icon: string | null; initials: string; size: number; textColor: string; background: string }) {
   const Icon = icon && icon in profileIcons ? profileIcons[icon as ProfileIconName] : null;
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: background, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: background, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       {Icon ? <Icon size={Math.round(size * 0.46)} color={textColor} /> : <Text style={{ color: textColor, fontSize: Math.round(size * 0.32), fontWeight: "800" }}>{initials}</Text>}
     </View>
   );
