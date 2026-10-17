@@ -2,10 +2,11 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ActivityCalendar } from "../components/ActivityCalendar";
+import { BadgeCollection } from "../components/BadgeCollection";
 import { icons } from "../components/Icons";
 import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
-import { XP_PER_LEVEL } from "../sample";
+import { levelProgress } from "../sample";
 import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
@@ -18,13 +19,13 @@ export function ProfileScreen() {
   const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
   const xp = profile?.xp ?? 0;
   const streak = profile?.streak ?? 0;
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
-  const into = xp % XP_PER_LEVEL;
+  const progress = levelProgress(xp);
+  const level = progress.level;
+  const into = progress.into;
   const completed = viewingSelf
     ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
     : completedCounts[profile?.id ?? ""] ?? 0;
   const name = profile?.username ?? "No profile";
-  const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = profile ? activityCounts[profile.id] ?? {} : {};
   return (
     <Screen>
@@ -48,8 +49,8 @@ export function ProfileScreen() {
         <View style={{ gap: 10, alignItems: "center" }}>
           <Text style={styles.level}>Level {level}</Text>
           <View style={styles.pill}>
-            <View style={[styles.pillFill, { width: `${Math.max(22, Math.round((into / XP_PER_LEVEL) * 100))}%` }]}>
-              <Text style={styles.pillText}>{into}/{XP_PER_LEVEL}</Text>
+            <View style={[styles.pillFill, { width: `${Math.max(22, Math.round((into / progress.need) * 100))}%` }]}>
+              <Text style={styles.pillText}>{into}/{progress.need}</Text>
             </View>
           </View>
           <View style={styles.stats}>
@@ -67,23 +68,9 @@ export function ProfileScreen() {
           <Text style={styles.block}>Activity</Text>
           <ActivityCalendar counts={activity} />
         </View>
-        <View style={{ gap: 14 }}>
-          <Text style={styles.block}>Achievements</Text>
-          {badgeList.length === 0 ? (
-            <Text style={styles.age}>No achievements yet. Complete a task to start one.</Text>
-          ) : (
-            <View style={styles.badges}>
-              {badgeList.map((badge) => (
-                <View key={badge.label} style={styles.badge}>
-                  <View style={[styles.ring, { borderColor: badge.color }]}>
-                    <badge.Icon size={19} color={badge.color} />
-                  </View>
-                  <Text style={styles.badgeLabel}>{badge.label}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        {profile ? (
+          <BadgeCollection name={name} xp={xp} streak={streak} completed={completed} streaks={profile.streaks} badges={profile.badges} items={viewingSelf ? items : null} />
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -104,8 +91,4 @@ const styles = StyleSheet.create({
   stat: { flex: 1, minWidth: 0, height: 48, paddingHorizontal: 10, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   statText: { flexShrink: 1, color: colors.text, fontSize: 12, fontWeight: "700" },
   block: { color: colors.text, fontSize: 17, fontWeight: "700" },
-  badges: { flexDirection: "row", gap: 6 },
-  badge: { flex: 1, alignItems: "center", gap: 8 },
-  ring: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  badgeLabel: { color: colors.secondary, fontSize: 8, textAlign: "center", lineHeight: 11 },
 });

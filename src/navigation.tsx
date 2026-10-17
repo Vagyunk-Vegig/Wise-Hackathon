@@ -17,6 +17,7 @@ import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { AccountScreen } from "./screens/AccountScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SocialScreen } from "./screens/SocialScreen";
+import { TaskDetailScreen } from "./screens/TaskDetailScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { WheelScreen } from "./screens/WheelScreen";
 import { useStore } from "./store";
@@ -131,6 +132,7 @@ export function AppNavigation() {
         <Root.Screen name="Account" component={AccountScreen} />
         <Root.Screen name="Commitment" component={CommitmentScreen} />
         <Root.Screen name="Notifications" component={NotificationsScreen} />
+        <Root.Screen name="TaskDetail" component={TaskDetailScreen} />
         <Root.Screen name="Wheel" component={WheelScreen} />
       </Root.Navigator>
       {toast ? <Toast toast={toast} /> : null}

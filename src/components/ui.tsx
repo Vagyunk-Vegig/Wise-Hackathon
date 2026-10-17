@@ -6,7 +6,7 @@ import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
 import { useRootNav } from "../routes";
-import { XP_PER_LEVEL } from "../sample";
+import { levelProgress } from "../sample";
 import { useStore } from "../store";
 
 export function Screen({ children }: { children: ReactNode }) {
@@ -45,7 +45,7 @@ export function TopBar({
   const { currentUser, totalXp, canSpinWheel } = useStore();
   const root = useRootNav();
   const initials = currentUser?.initials ?? "··";
-  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+  const level = levelProgress(totalXp).level;
   return (
     <View style={styles.topBar}>
       <Pressable onPress={onAvatar} style={styles.avatarWrap}>
@@ -88,6 +88,7 @@ export function SectionLabel({ title, count }: { title: string; count?: string }
 }
 
 export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onToggle?: () => void; showCheck?: boolean }) {
+  const root = useRootNav();
   const meta = categoryMeta[item.category];
   const goal = item.kind === "goal";
   const deadline = item.kind === "deadline";
@@ -96,28 +97,36 @@ export function ItemRow({ item, onToggle, showCheck = false }: { item: Item; onT
   return (
     <View style={[styles.row, dim && { opacity: 0.48 }]}>
       {goal ? <View style={[styles.stripe, { backgroundColor: item.done ? colors.accent : colors.goalOpen }]} /> : null}
-      {!deadline || item.category ? (
-        <View style={[styles.tile, { backgroundColor: `${meta.color}17` }, goal && contentDim && { opacity: 0.48 }]}>
-          <meta.Icon size={17} color={meta.color} />
-        </View>
-      ) : null}
-      <Text style={[styles.rowTitle, goal && contentDim && { opacity: 0.48 }]} numberOfLines={1}>
-        {item.title}
-      </Text>
-      {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
-      {item.money && !deadline ? (
-        <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
-          <Text style={styles.euroText}>Ft</Text>
-        </View>
-      ) : null}
-      {deadline ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+        onPress={() => root.navigate("TaskDetail", { id: item.id, date: item.date })}
+        style={styles.rowMain}
+      >
+        {!deadline || item.category ? (
+          <View style={[styles.tile, { backgroundColor: `${meta.color}17` }, goal && contentDim && { opacity: 0.48 }]}>
+            <meta.Icon size={17} color={meta.color} />
+          </View>
+        ) : null}
+        <Text style={[styles.rowTitle, goal && contentDim && { opacity: 0.48 }]} numberOfLines={1}>
+          {item.title}
+        </Text>
+        {item.xp > 0 ? <Text style={[styles.xp, goal && contentDim && { opacity: 0.48 }]}>+{item.xp} XP</Text> : null}
+        {item.money && !deadline ? (
+          <View style={[styles.euro, goal && contentDim && { opacity: 0.48 }]}>
+            <Text style={styles.euroText}>Ft</Text>
+          </View>
+        ) : null}
+      </Pressable>
+      {deadline && !item.done ? (
         <View style={[styles.chip, dueChip(item.date) === "Due today" ? styles.chipHot : dueChip(item.date) === "Overdue" ? styles.chipBad : styles.chipSoon]}>
           <Text style={[styles.chipText, dueChip(item.date) === "Due today" ? { color: colors.due } : dueChip(item.date) === "Overdue" ? { color: "#FF8ABF" } : { color: colors.accent }]}>
             {dueChip(item.date)}
           </Text>
         </View>
-      ) : showCheck ? (
-        <Pressable onPress={onToggle} disabled={item.done} hitSlop={8}>
+      ) : null}
+      {showCheck ? (
+        <Pressable onPress={onToggle} disabled={item.done} hitSlop={8} accessibilityRole="checkbox" accessibilityState={{ checked: item.done }} accessibilityLabel={`Mark ${item.title} done`}>
           <View style={[styles.check, item.done && styles.checkOn]}>
             {item.done ? <icons.Check size={14} color={colors.onAccent} strokeWidth={3} /> : null}
           </View>
@@ -227,9 +236,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 10,
+    paddingRight: 10,
     overflow: "hidden",
   },
+  rowMain: { flex: 1, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 10 },
   stripe: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
   tile: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   rowTitle: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "600" },

@@ -10,6 +10,7 @@ export type RootStackParamList = {
   Account: undefined;
   Commitment: undefined;
   Notifications: undefined;
+  TaskDetail: { id: string; date: string };
   Wheel: undefined;
 };
 

@@ -179,6 +179,7 @@ export function rowToItem(row: TaskRow): Item {
     date: meta.date,
     done: meta.done,
     doneDates: meta.doneDates,
+    note: meta.note,
   };
 }
 
@@ -418,6 +419,14 @@ export async function saveTaskDone(row: TaskRow, done: boolean, occurrenceDate?:
   return { ...row, description };
 }
 
+export async function saveTaskNote(row: TaskRow, note: string) {
+  const meta = decodeMeta(row.description, row.task_type, row.category);
+  const description = encodeMeta({ ...meta, note });
+  const { error } = await supabase.from("task").update({ description }).eq("id", row.id);
+  if (error) throw new Error(error.message);
+  return { ...row, description };
+}
+
 export function bumpStreak(current: unknown, today: string) {
   const base = current && typeof current === "object" && !Array.isArray(current) ? { ...(current as Record<string, unknown>) } : {};
   const last = typeof base.last === "string" ? base.last : null;
@@ -434,7 +443,8 @@ function shiftDate(iso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export async function saveUserProgress(id: string, xp: number, streaks: unknown) {
-  const { error } = await supabase.from("user").update({ xp, streaks }).eq("user_id", id);
+export async function saveUserProgress(id: string, xp: number, streaks: unknown, badges?: string[]) {
+  const payload = badges ? { xp, streaks, badges } : { xp, streaks };
+  const { error } = await supabase.from("user").update(payload).eq("user_id", id);
   if (error) throw new Error(error.message);
 }
