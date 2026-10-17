@@ -1,6 +1,23 @@
 import { Category, type Item, type Person } from "./types";
 
-export const XP_PER_LEVEL = 500;
+const LEVEL_BASE_XP = 240;
+const LEVEL_STEP_XP = 40;
+
+export function xpToAdvance(level: number) {
+  return LEVEL_BASE_XP + Math.max(0, level - 1) * LEVEL_STEP_XP;
+}
+
+export function levelProgress(xp: number) {
+  let level = 1;
+  let into = Math.max(0, Math.floor(xp));
+  let need = xpToAdvance(level);
+  while (into >= need) {
+    into -= need;
+    level += 1;
+    need = xpToAdvance(level);
+  }
+  return { level, into, need };
+}
 export const PENALTY_FT = 800;
 export const STARTING_XP = 5680;
 

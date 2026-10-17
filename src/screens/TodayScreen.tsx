@@ -17,7 +17,7 @@ export function TodayScreen() {
   return (
     <Screen>
       <TopBar streak={streak} onAvatar={() => navigation.navigate("Profile")} onSettings={() => navigation.navigate("Settings")} />
-      <ScrollView contentContainerStyle={today.length === 0 ? { flexGrow: 1, paddingHorizontal: 16 } : { paddingHorizontal: 16, paddingBottom: 24, gap: 16 }}>
+      <ScrollView contentContainerStyle={today.length === 0 ? { flexGrow: 1, paddingHorizontal: 16, paddingTop: 12 } : { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24, gap: 16 }}>
         <TomorrowBanner onPress={() => navigation.navigate("Create", { date: shiftDate(TODAY, 1), kind: "goal" })} />
         {today.length === 0 ? (
           <View style={{ flex: 1 }}>

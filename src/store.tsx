@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking } from "react-native";
-import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveTaskNote, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { badgeRewardText, settleBadges } from "./badges";
+import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, readStreak, rowToItem, saveTaskDone, saveTaskNote, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
-import { XP_PER_LEVEL } from "./sample";
+import { levelProgress } from "./sample";
 import { supabase } from "./supabase";
 import { Category, type Item, type Person, type ToastMessage } from "./types";
 
@@ -285,12 +286,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       if (gained > 0) {
         profile = { ...profile, xp: profile.xp + gained, streaks: writePokeLog(profile.streaks, log) };
-        void saveUserProgress(profile.id, profile.xp, profile.streaks).catch((error: unknown) => {
-          showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
-        });
         const notice = gained === 5 ? "Your poke helped — +5 XP" : `Your pokes helped — +${gained} XP`;
         setPokeNotice(notice);
         showToast(notice, "success", "heart");
+      }
+      const ownItems = ownTasks.map(rowToItem);
+      const settled = settleBadges({ xp: profile.xp, streak: profile.streak, streaks: profile.streaks, badges: profile.badges, completed: 0, items: ownItems });
+      if (settled.changed) {
+        profile = { ...profile, xp: settled.xp, streak: readStreak(settled.streaks), streaks: settled.streaks, badges: settled.badges };
+        void saveUserProgress(profile.id, settled.xp, settled.streaks, settled.badges).catch((error: unknown) => {
+          showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
+        });
+        const reward = badgeRewardText(settled.gained);
+        if (reward) showToast(reward, "success", "sparkles");
+      } else if (gained > 0) {
+        void saveUserProgress(profile.id, profile.xp, profile.streaks).catch((error: unknown) => {
+          showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
+        });
       }
       const boardUsers = visibleUsers.map((user) => (user.id === profile.id ? profile : user));
       if (!cancelled) {
@@ -368,35 +380,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       completeItem: (id, date) => {
         const row = rows.current.get(id);
         const item = items.find((entry) => entry.id === id);
-        if (!row || !item || item.kind === "deadline") return;
+        if (!row || !item) return;
+        if (item.kind === "deadline" && date !== TODAY) return;
         const habitDone = item.doneDates.includes(date) || (item.done && item.date === date && item.doneDates.length === 0);
         if (item.kind === "habit" && (date > TODAY || habitDone)) return;
         if (item.kind !== "habit" && item.done) return;
         const baseXp = currentUser?.xp ?? 0;
         const nextXp = baseXp + item.xp;
-        const previousLevel = Math.floor(baseXp / XP_PER_LEVEL) + 1;
-        const nextLevel = Math.floor(nextXp / XP_PER_LEVEL) + 1;
+        const previousLevel = levelProgress(baseXp).level;
         const streakUpdate = bumpStreak(currentUser?.streaks, date);
-        setItems((current) =>
-          current.map((entry) => {
-            if (entry.id !== id) return entry;
-            if (entry.kind === "habit") {
-              if (entry.doneDates.includes(date)) return entry;
-              return { ...entry, doneDates: [...entry.doneDates, date] };
-            }
-            return { ...entry, done: true };
-          }),
-        );
-        if (currentUser) {
+        const nextItems = items.map((entry) => {
+          if (entry.id !== id) return entry;
+          if (entry.kind === "habit") {
+            if (entry.doneDates.includes(date)) return entry;
+            return { ...entry, doneDates: [...entry.doneDates, date] };
+          }
+          return { ...entry, done: true };
+        });
+        const settled = currentUser
+          ? settleBadges({ xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value, badges: currentUser.badges, completed: 0, items: nextItems, claimMorning: true })
+          : null;
+        const savedXp = settled?.xp ?? nextXp;
+        const nextLevel = levelProgress(savedXp).level;
+        setItems(nextItems);
+        if (currentUser && settled) {
           setUsers((current) =>
-            current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
+            current.map((user) => (user.id === currentUser.id ? { ...user, xp: settled.xp, streak: streakUpdate.count, streaks: settled.streaks, badges: settled.badges } : user)),
           );
           setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
           setActivityCounts((current) => {
             const previous = current[currentUser.id] ?? {};
             return { ...current, [currentUser.id]: { ...previous, [date]: (previous[date] ?? 0) + 1 } };
           });
-          if (item.date === TODAY) {
+          if (item.date === TODAY && item.kind !== "deadline") {
             setDailyTasks((current) => {
               const previous = current[currentUser.id] ?? { done: 0, total: 0 };
               return { ...current, [currentUser.id]: { ...previous, done: previous.done + 1 } };
@@ -408,12 +424,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             rows.current.set(id, saved);
           })
           .catch((error: unknown) => showToast(error instanceof Error ? error.message : "Could not save task", "error", "alert"));
-        if (currentUser) {
-          void saveUserProgress(currentUser.id, nextXp, streakUpdate.value).catch((error: unknown) => {
+        const reward = settled ? badgeRewardText(settled.gained) : null;
+        if (currentUser && settled) {
+          void saveUserProgress(currentUser.id, settled.xp, settled.streaks, settled.badges).catch((error: unknown) => {
             showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
           });
         }
-        if (nextLevel > previousLevel) showToast(`Level ${nextLevel}`, "success", "sparkles");
+        if (reward) showToast(reward, "success", "sparkles");
+        else if (nextLevel > previousLevel) showToast(`Level ${nextLevel}`, "success", "sparkles");
+        else if (item.kind === "deadline") showToast("Deadline completed");
         else showToast(`${item.kind === "habit" ? "Habit" : "Task"} completed · +${item.xp} XP`);
       },
       addItem: async (item) => {
@@ -427,7 +446,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           note: item.description ?? "",
         });
         rows.current.set(String(row.id), row);
-        setItems((current) => [rowToItem(row), ...current]);
+        const created = rowToItem(row);
+        const nextItems = [created, ...items];
+        setItems(nextItems);
+        const settled = settleBadges({ xp: currentUser.xp, streak: currentUser.streak, streaks: currentUser.streaks, badges: currentUser.badges, completed: 0, items: nextItems });
+        if (settled.changed) {
+          setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, xp: settled.xp, streaks: settled.streaks, badges: settled.badges } : user)));
+          void saveUserProgress(currentUser.id, settled.xp, settled.streaks, settled.badges).catch((error: unknown) => {
+            showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
+          });
+          const reward = badgeRewardText(settled.gained);
+          if (reward) showToast(reward, "success", "sparkles");
+        }
       },
       updateItemNote: async (id, note) => {
         const row = rows.current.get(id);
@@ -484,13 +514,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (helped) log.rewarded.push(id);
         const nextXp = currentUser.xp + (helped ? 5 : 0);
         const streaks = writePokeLog(currentUser.streaks, log);
+        const settled = settleBadges({ xp: nextXp, streak: currentUser.streak, streaks, badges: currentUser.badges, completed: 0, items });
         setFriends((current) => current.map((entry) => (entry.id === id ? { ...entry, poke: "sent" } : entry)));
-        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streaks } : user)));
-        void saveUserProgress(currentUser.id, nextXp, streaks).catch((error: unknown) => {
+        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, xp: settled.xp, streaks: settled.streaks, badges: settled.badges } : user)));
+        void saveUserProgress(currentUser.id, settled.xp, settled.streaks, settled.badges).catch((error: unknown) => {
           showToast(error instanceof Error ? error.message : "Could not save XP", "error", "alert");
         });
         if (helped) setPokeNotice("Your poke helped — +5 XP");
-        showToast(helped ? "Your poke helped — +5 XP" : "Poked", "success", "heart");
+        const reward = badgeRewardText(settled.gained);
+        showToast(reward ?? (helped ? "Your poke helped — +5 XP" : "Poked"), "success", reward ? "sparkles" : "heart");
       },
       setProfileIcon: async (icon) => {
         if (!currentUser || currentUser.icon === icon) return;

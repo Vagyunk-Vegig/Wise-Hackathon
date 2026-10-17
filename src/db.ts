@@ -443,7 +443,8 @@ function shiftDate(iso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export async function saveUserProgress(id: string, xp: number, streaks: unknown) {
-  const { error } = await supabase.from("user").update({ xp, streaks }).eq("user_id", id);
+export async function saveUserProgress(id: string, xp: number, streaks: unknown, badges?: string[]) {
+  const payload = badges ? { xp, streaks, badges } : { xp, streaks };
+  const { error } = await supabase.from("user").update(payload).eq("user_id", id);
   if (error) throw new Error(error.message);
 }
