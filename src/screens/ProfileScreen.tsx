@@ -28,7 +28,9 @@ export function ProfileScreen() {
   const streak = profile?.streak ?? 0;
   const level = Math.floor(xp / XP_PER_LEVEL) + 1;
   const into = xp % XP_PER_LEVEL;
-  const completed = viewingSelf ? items.filter((item) => item.done).length : completedCounts[profile?.id ?? ""] ?? 0;
+  const completed = viewingSelf
+    ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
+    : completedCounts[profile?.id ?? ""] ?? 0;
   const name = profile?.username ?? "No profile";
   const badgeList = (profile?.badges ?? []).map((label) => ({ label, color: colors.accent, Icon: icons.Star }));
   const activity = completed > 0 ? rows : rows.map((row) => row.map(() => 3));

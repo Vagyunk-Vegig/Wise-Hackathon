@@ -18,6 +18,7 @@ export type Item = {
   money: boolean;
   date: string;
   done: boolean;
+  doneDates: string[];
 };
 
 export type Person = {

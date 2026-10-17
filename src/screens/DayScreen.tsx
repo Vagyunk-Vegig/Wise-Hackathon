@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { icons } from "../components/Icons";
 import { DayList } from "../components/DayList";
 import { Screen, TopBar } from "../components/ui";
+import { itemsForDate } from "../schedule";
 import { colors } from "../theme";
 import { useRootNav, type PlanStackParamList } from "../routes";
 import { useStore } from "../store";
@@ -13,7 +14,7 @@ export function DayScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<PlanStackParamList>>();
   const root = useRootNav();
   const { items, streak, completeItem } = useStore();
-  const dayItems = items.filter((item) => item.date === route.params.date);
+  const dayItems = itemsForDate(items, route.params.date);
 
   return (
     <Screen>
@@ -23,7 +24,7 @@ export function DayScreen() {
         <Text style={styles.backText}>Plan</Text>
       </Pressable>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
-        <DayList date={route.params.date} items={dayItems} onToggle={completeItem} />
+        <DayList date={route.params.date} items={dayItems} onToggle={(id) => completeItem(id, route.params.date)} />
       </ScrollView>
     </Screen>
   );
