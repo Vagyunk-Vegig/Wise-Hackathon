@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryMeta, icons } from "../components/Icons";
 import { IconButton, PageHeader, PrimaryButton, Screen } from "../components/ui";
 import { TODAY, isoDate, longDate, monthGrid, parts } from "../dates";
@@ -33,6 +34,9 @@ export function CreateScreen() {
   const [titleError, setTitleError] = useState(false);
   const [dateError, setDateError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  const closePicker = () => setPickerOpen(false);
 
   const submit = async () => {
     const missingTitle = title.trim().length === 0;
@@ -126,23 +130,6 @@ export function CreateScreen() {
               <Text style={{ flex: 1, color: date ? colors.text : colors.placeholder, fontSize: 14 }}>{date ? longDate(date) : ""}</Text>
               <icons.CalendarDays size={17} color={pickerOpen ? colors.accent : colors.secondary} />
             </Pressable>
-            {pickerOpen ? (
-              <DatePicker
-                cursor={cursor}
-                selected={date}
-                onShift={(delta) =>
-                  setCursor((current) => {
-                    const next = new Date(Date.UTC(current.year, current.month - 1 + delta, 1));
-                    return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1 };
-                  })
-                }
-                onSelect={(iso) => {
-                  setDate(iso);
-                  setPickerOpen(false);
-                  setDateError(false);
-                }}
-              />
-            ) : null}
           </Field>
           {kind === "habit" ? (
             <Text style={styles.help}>A new occurrence appears each day. You can complete it once per day.</Text>
@@ -150,6 +137,28 @@ export function CreateScreen() {
         </View>
         <PrimaryButton label={saving ? "Saving" : kind === "habit" ? "Create habit" : kind === "goal" ? "Create task" : "Create deadline"} onPress={submit} disabled={saving} />
       </ScrollView>
+      {pickerOpen ? (
+        <View style={styles.sheetRoot} pointerEvents="box-none">
+          <Pressable style={styles.sheetBackdrop} onPress={closePicker} accessibilityRole="button" accessibilityLabel="Close calendar" />
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+            <DatePicker
+              cursor={cursor}
+              selected={date}
+              onShift={(delta) =>
+                setCursor((current) => {
+                  const next = new Date(Date.UTC(current.year, current.month - 1 + delta, 1));
+                  return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1 };
+                })
+              }
+              onSelect={(iso) => {
+                setDate(iso);
+                setPickerOpen(false);
+                setDateError(false);
+              }}
+            />
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -223,7 +232,19 @@ const styles = StyleSheet.create({
   inputError: { borderColor: colors.streak },
   dateInput: { flexDirection: "row", alignItems: "center" },
   dateOpen: { borderColor: colors.accent },
-  picker: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, padding: 10, gap: 8 },
+  sheetRoot: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+  picker: { gap: 8 },
   month: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   monthTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
   week: { flexDirection: "row" },
