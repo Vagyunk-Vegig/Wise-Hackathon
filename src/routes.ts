@@ -5,7 +5,7 @@ import type { ItemKind } from "./types";
 export type RootStackParamList = {
   Main: undefined;
   Create: { date?: string; kind?: ItemKind } | undefined;
-  Profile: undefined;
+  Profile: { userId?: string } | undefined;
   Settings: undefined;
   Commitment: undefined;
 };

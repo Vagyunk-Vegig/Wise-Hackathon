@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
+import { acceptFriendship, bumpStreak, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
 import type { Item, Person, ToastMessage } from "./types";
@@ -32,7 +32,9 @@ type Store = {
   streak: number;
   friends: Person[];
   requests: Person[];
+  outgoing: string[];
   users: AppUser[];
+  completedCounts: Record<string, number>;
   currentUser: AppUser | null;
   signedIn: boolean;
   authReady: boolean;
@@ -41,6 +43,7 @@ type Store = {
   completeItem: (id: string) => void;
   addItem: (item: NewItem) => Promise<void>;
   acceptRequest: (id: string) => void;
+  sendRequest: (id: string) => Promise<void>;
   poke: (id: string) => void;
   setCommitment: (on: boolean) => void;
   showToast: (text: string, tone?: ToastMessage["tone"], icon?: ToastMessage["icon"]) => void;
@@ -56,14 +59,18 @@ const StoreContext = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [completedCounts, setCompletedCounts] = useState<Record<string, number>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [friends, setFriends] = useState<Person[]>([]);
   const [requests, setRequests] = useState<Person[]>([]);
+  const [outgoing, setOutgoing] = useState<string[]>([]);
   const [commitmentOn, setCommitment] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const rows = useRef(new Map<string, TaskRow>());
+  const friendshipRows = useRef<FriendshipRow[]>([]);
+  const sending = useRef(new Set<string>());
 
   const showToast: Store["showToast"] = (text, tone = "success", icon = "check") => {
     setToast({ id: Date.now(), text, tone, icon });
@@ -75,19 +82,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setUsers(boardUsers);
     const current = preferredId ? boardUsers.find((user) => user.id === preferredId) ?? null : null;
     setCurrentUserId(current?.id ?? null);
+    friendshipRows.current = friendships;
+    relate(boardUsers, current?.id ?? null, friendships);
+  };
+
+  const relate = (boardUsers: AppUser[], currentId: string | null, links: FriendshipRow[]) => {
     const friendIds = new Set<string>();
     const requestIds = new Set<string>();
-    for (const row of friendships) {
-      if (!current) continue;
-      if (row.user_sender === current.id) {
-        if (row.is_accepted) friendIds.add(row.user_receiver);
-      } else if (row.user_receiver === current.id) {
-        if (row.is_accepted) friendIds.add(row.user_sender);
-        else requestIds.add(row.user_sender);
-      }
+    const outgoingIds = new Set<string>();
+    for (const row of links) {
+      if (!currentId) continue;
+      const sent = row.user_sender === currentId;
+      const received = row.user_receiver === currentId;
+      if (!sent && !received) continue;
+      const other = sent ? row.user_receiver : row.user_sender;
+      if (row.is_accepted) friendIds.add(other);
+      else if (sent) outgoingIds.add(other);
+      else requestIds.add(other);
     }
     setFriends(boardUsers.filter((user) => friendIds.has(user.id)).map(toPerson));
     setRequests(boardUsers.filter((user) => requestIds.has(user.id)).map(toPerson));
+    setOutgoing([...outgoingIds]);
   };
 
   useEffect(() => {
@@ -98,6 +113,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const sessionId = data.session?.user.id ?? null;
       if (!sessionId) {
         if (!cancelled) {
+          setCompletedCounts({});
           publish([], [], null);
           setSignedIn(false);
           setAuthReady(true);
@@ -128,8 +144,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       board = { ...board, users: [profile, ...board.users.filter((user) => user.id !== sessionId)] };
       const visibleUsers = board.users.filter((user) => user.id !== PROBE_USER && user.username !== "probe");
       const ownTasks = board.tasks.filter((task) => task.user_id === sessionId);
+      const counts: Record<string, number> = {};
+      for (const task of board.tasks) {
+        if (!rowToItem(task).done) continue;
+        counts[task.user_id] = (counts[task.user_id] ?? 0) + 1;
+      }
       const friendships = await fetchFriendships().catch(() => []);
       if (!cancelled) {
+        setCompletedCounts(counts);
         publish(visibleUsers, ownTasks, sessionId, friendships);
         setSignedIn(true);
         setAuthReady(true);
@@ -164,7 +186,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       streak: currentUser?.streak ?? 0,
       friends,
       requests,
+      outgoing,
       users,
+      completedCounts,
       currentUser,
       signedIn,
       authReady,
@@ -187,6 +211,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setUsers((current) =>
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
+          setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
         }
         void saveTaskDone(row, true)
           .then(() => {
@@ -217,9 +242,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       acceptRequest: (id) => {
         const person = requests.find((entry) => entry.id === id);
-        if (!person) return;
-        setRequests((current) => current.filter((entry) => entry.id !== id));
-        setFriends((current) => [...current, { ...person, meta: "Not started", poke: "poke" }]);
+        const row = friendshipRows.current.find((entry) => !entry.is_accepted && entry.user_sender === id && entry.user_receiver === currentUser?.id);
+        if (!person || !row || !currentUser) return;
+        const previous = friendshipRows.current;
+        const next = previous.map((entry) => (entry.id === row.id ? { ...entry, is_accepted: true } : entry));
+        friendshipRows.current = next;
+        relate(users, currentUser.id, next);
+        void acceptFriendship(row.id)
+          .then(() => showToast("Friend request accepted"))
+          .catch((error: unknown) => {
+            friendshipRows.current = previous;
+            relate(users, currentUser.id, previous);
+            showToast(error instanceof Error ? error.message : "Could not accept the request", "error", "alert");
+          });
+      },
+      sendRequest: async (id) => {
+        if (!currentUser || id === currentUser.id || sending.current.has(id)) return;
+        const existing = friendshipRows.current.some((entry) => (entry.user_sender === currentUser.id && entry.user_receiver === id) || (entry.user_sender === id && entry.user_receiver === currentUser.id));
+        if (existing) return;
+        sending.current.add(id);
+        try {
+          const row = await insertFriendship(currentUser.id, id);
+          const next = [...friendshipRows.current, row];
+          friendshipRows.current = next;
+          relate(users, currentUser.id, next);
+          showToast("Friend request sent");
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : "Could not send the friend request", "error", "alert");
+        } finally {
+          sending.current.delete(id);
+        }
       },
       poke: (id) => {
         const person = friends.find((entry) => entry.id === id);
@@ -261,12 +313,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         const { error } = await supabase.auth.signOut();
         if (error) throw new Error(error.message);
+        setCompletedCounts({});
         publish([], [], null);
         setSignedIn(false);
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, users, currentUser, signedIn, authReady, commitmentOn, toast]);
+  }, [items, friends, requests, outgoing, users, completedCounts, currentUser, signedIn, authReady, commitmentOn, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }

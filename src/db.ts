@@ -171,10 +171,32 @@ export type FriendshipRow = {
   user_receiver: string;
 };
 
+const friendshipColumns = "id,is_accepted,user_sender,user_receiver";
+
+function toFriendship(row: FriendshipRow): FriendshipRow {
+  return { ...row, id: Number(row.id), is_accepted: Boolean(row.is_accepted) };
+}
+
 export async function fetchFriendships() {
-  const { data, error } = await supabase.from("friendship").select("id,is_accepted,user_sender,user_receiver");
+  const { data, error } = await supabase.from("friendship").select(friendshipColumns);
   if (error) throw new Error(error.message);
-  return (data ?? []) as FriendshipRow[];
+  return ((data ?? []) as FriendshipRow[]).map(toFriendship);
+}
+
+export async function insertFriendship(sender: string, receiver: string) {
+  const { data, error } = await supabase
+    .from("friendship")
+    .insert({ user_sender: sender, user_receiver: receiver, is_accepted: false, acceptance_date: null })
+    .select(friendshipColumns)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Could not send the friend request.");
+  return toFriendship(data as FriendshipRow);
+}
+
+export async function acceptFriendship(id: number) {
+  const { error } = await supabase.from("friendship").update({ is_accepted: true, acceptance_date: new Date().toISOString().slice(0, 10) }).eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export async function fetchBoard() {
