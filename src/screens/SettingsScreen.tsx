@@ -13,6 +13,7 @@ const rows = [
   { key: "notes", label: "Notifications", Icon: icons.Bell },
   { key: "privacy", label: "Privacy", Icon: icons.Shield },
   { key: "commitment", label: "Commitment", Icon: icons.HandHeart },
+  { key: "wheel", label: "Weekly wheel", Icon: icons.Gift },
   { key: "logout", label: "Log out", Icon: icons.LogOut },
 ] as const;
 
@@ -32,6 +33,7 @@ export function SettingsScreen() {
                 if (row.key === "account") navigation.navigate("Account");
                 else if (row.key === "commitment") navigation.navigate("Commitment");
                 else if (row.key === "notes") navigation.navigate("Notifications");
+                else if (row.key === "wheel") navigation.navigate("Wheel");
                 else if (row.key === "logout") {
                   void signOut().catch((error: unknown) => {
                     showToast(error instanceof Error ? error.message : "Could not sign out", "error", "alert");

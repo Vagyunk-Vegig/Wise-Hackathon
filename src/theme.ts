@@ -46,5 +46,4 @@ export const radius = {
 
 export const inputReset = {
   outlineWidth: 0,
-  outlineStyle: "none" as const,
 };

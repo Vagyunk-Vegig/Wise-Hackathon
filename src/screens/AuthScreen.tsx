@@ -61,7 +61,7 @@ export function AuthScreen() {
     <Screen>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 8 }}>
-          <Text style={styles.mark}>habit.</Text>
+          <Text style={styles.mark}>morrow.</Text>
           <Text style={styles.title}>{signUpMode ? "Create account" : "Sign in"}</Text>
           <Text style={styles.sub}>{signUpMode ? "Use Google, or a username, email, and password." : "Use Google, or the email and password for your account."}</Text>
         </View>

@@ -10,6 +10,7 @@ export type RootStackParamList = {
   Account: undefined;
   Commitment: undefined;
   Notifications: undefined;
+  Wheel: undefined;
 };
 
 export type PlanStackParamList = {

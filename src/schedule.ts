@@ -1,4 +1,9 @@
+import { PENALTY_FT } from "./sample";
 import type { Item } from "./types";
+
+export function atRisk(items: Item[], penalty = PENALTY_FT) {
+  return items.filter((item) => item.money && item.kind !== "deadline" && !item.done).length * penalty;
+}
 
 function habitDoneOn(item: Item, date: string) {
   if (item.doneDates.includes(date)) return true;

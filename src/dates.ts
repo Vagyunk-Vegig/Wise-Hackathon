@@ -83,6 +83,15 @@ export function monthGrid(year: number, month: number) {
 }
 
 export function moneyLabel(amount: number) {
-  const formatted = new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 0 }).format(amount);
-  return `−${formatted} Ft`;
+  return `−${ftLabel(amount)}`;
+}
+
+export function ftLabel(amount: number) {
+  return `${new Intl.NumberFormat("hu-HU", { maximumFractionDigits: 0 }).format(amount)} Ft`;
+}
+
+export const WHEEL_COOLDOWN_DAYS = 7;
+
+export function wheelUnlocksOn(spunOn: string) {
+  return shiftDate(spunOn, WHEEL_COOLDOWN_DAYS);
 }

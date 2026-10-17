@@ -5,6 +5,7 @@ import { categoryMeta, icons, profileIcons, type ProfileIconName } from "./Icons
 import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
+import { useRootNav } from "../routes";
 import { XP_PER_LEVEL } from "../sample";
 import { useStore } from "../store";
 
@@ -41,7 +42,8 @@ export function TopBar({
   onAvatar: () => void;
   onSettings: () => void;
 }) {
-  const { currentUser, totalXp } = useStore();
+  const { currentUser, totalXp, canSpinWheel } = useStore();
+  const root = useRootNav();
   const initials = currentUser?.initials ?? "··";
   const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
   return (
@@ -60,6 +62,14 @@ export function TopBar({
       <View style={styles.streak}>
         <icons.Flame size={16} color={colors.streak} fill={colors.streak} />
         <Text style={styles.streakText}>{streak}</Text>
+      </View>
+      <View style={styles.wheelHit}>
+        <IconButton onPress={() => root.navigate("Wheel")}>
+          <View>
+            <icons.Gift size={18} color={colors.text} />
+            {canSpinWheel ? <View style={styles.wheelDot} /> : null}
+          </View>
+        </IconButton>
       </View>
       <IconButton onPress={onSettings}>
         <icons.Settings size={18} color={colors.text} />
@@ -193,6 +203,18 @@ const styles = StyleSheet.create({
   trackFill: { height: 8, backgroundColor: colors.accent, borderRadius: 99 },
   streak: { flexDirection: "row", alignItems: "center", gap: 4 },
   streakText: { color: colors.streak, fontSize: 15, fontWeight: "800" },
+  wheelHit: { marginLeft: 6 },
+  wheelDot: {
+    position: "absolute",
+    top: -3,
+    right: -4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.elevated,
+  },
   section: { height: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { color: colors.secondary, fontSize: 10, fontWeight: "700", letterSpacing: 1.1 },
   sectionCount: { color: colors.text, fontSize: 13, fontWeight: "700" },

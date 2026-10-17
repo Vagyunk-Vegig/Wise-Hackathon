@@ -1,16 +1,12 @@
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from "react-native";
-import { PENALTY_FT } from "../sample";
 import { moneyLabel, shortDate, TODAY } from "../dates";
+import { atRisk } from "../schedule";
 import { colors } from "../theme";
 import { useStore } from "../store";
 import type { Item } from "../types";
 import { icons } from "./Icons";
 import { ItemRow, QuietRow, SectionLabel } from "./ui";
-
-export function atRisk(items: Item[], penalty = PENALTY_FT) {
-  return items.filter((item) => item.money && item.kind !== "deadline" && !item.done).length * penalty;
-}
 
 function openFirst(items: Item[]) {
   return [...items].sort((a, b) => Number(a.done) - Number(b.done));

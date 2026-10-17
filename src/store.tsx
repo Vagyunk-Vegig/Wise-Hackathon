@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking } from "react-native";
 import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
-import { TODAY } from "./dates";
+import { daysFromToday, shiftDate, TODAY, wheelUnlocksOn } from "./dates";
+import { atRisk, itemsForDate } from "./schedule";
 import { XP_PER_LEVEL } from "./sample";
+import { pickWheelSlice, WHEEL_SLICES, type WheelRecord } from "./wheel";
 import { supabase } from "./supabase";
 import { Category, type Item, type Person, type ToastMessage } from "./types";
 
@@ -71,6 +73,26 @@ function writePokeLog(streaks: unknown, log: PokeLog) {
   return { count: 0, pokes: log };
 }
 
+function readWheel(streaks: unknown): WheelRecord | null {
+  if (!streaks || typeof streaks !== "object" || Array.isArray(streaks)) return null;
+  const wheel = (streaks as { wheel?: Partial<WheelRecord> }).wheel;
+  if (!wheel || typeof wheel.week !== "string" || typeof wheel.date !== "string" || typeof wheel.prizeId !== "string") return null;
+  return {
+    week: wheel.week,
+    date: wheel.date,
+    prizeId: wheel.prizeId,
+    share: typeof wheel.share === "number" ? wheel.share : 0,
+    recoveredFt: typeof wheel.recoveredFt === "number" ? wheel.recoveredFt : 0,
+    lostFt: typeof wheel.lostFt === "number" ? wheel.lostFt : 0,
+  };
+}
+
+function writeWheel(streaks: unknown, wheel: WheelRecord) {
+  if (Array.isArray(streaks)) return { count: streaks.length, wheel };
+  if (streaks && typeof streaks === "object") return { ...(streaks as Record<string, unknown>), wheel };
+  return { count: 0, wheel };
+}
+
 function finishedDaily(tasks: { done: number; total: number } | undefined) {
   return Boolean(tasks && tasks.total > 0 && tasks.done >= tasks.total);
 }
@@ -137,6 +159,12 @@ type Store = {
   onboardingReady: boolean;
   finishOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
   updateOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
+  yesterdayLostFt: number;
+  wheelThisWeek: WheelRecord | null;
+  canSpinWheel: boolean;
+  nextWheelDate: string;
+  wheelDaysLeft: number;
+  spinWheel: () => WheelRecord | null;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -333,6 +361,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? null;
+  const yesterdayLostFt = atRisk(itemsForDate(items, shiftDate(TODAY, -1)), penaltyFt);
+  const savedWheel = readWheel(currentUser?.streaks);
+  const nextWheelDate = savedWheel ? wheelUnlocksOn(savedWheel.date) : TODAY;
+  const wheelDaysLeft = Math.max(0, daysFromToday(nextWheelDate));
+  const wheelThisWeek = wheelDaysLeft > 0 ? savedWheel : null;
 
   const api = useMemo<Store>(() => {
     return {
@@ -356,6 +389,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       nudgeTime,
       onboardingComplete,
       onboardingReady,
+      yesterdayLostFt,
+      wheelThisWeek,
+      canSpinWheel: Boolean(currentUser) && !wheelThisWeek && yesterdayLostFt > 0,
+      nextWheelDate,
+      wheelDaysLeft,
+      spinWheel: () => {
+        if (!currentUser) {
+          showToast("Sign in to spin the wheel.", "error", "alert");
+          return null;
+        }
+        if (wheelThisWeek) {
+          showToast(`The wheel recharges in ${wheelDaysLeft} day${wheelDaysLeft === 1 ? "" : "s"}.`, "error", "alert");
+          return wheelThisWeek;
+        }
+        const lostFt = atRisk(itemsForDate(items, shiftDate(TODAY, -1)), penaltyFt);
+        if (lostFt <= 0) {
+          showToast("Nothing was lost yesterday, so there is nothing to recover.", "error", "alert");
+          return null;
+        }
+        const slice = WHEEL_SLICES[pickWheelSlice()];
+        const recoveredFt = Math.round(lostFt * slice.share);
+        const record: WheelRecord = {
+          week: wheelUnlocksOn(TODAY),
+          date: TODAY,
+          prizeId: slice.id,
+          share: slice.share,
+          recoveredFt,
+          lostFt,
+        };
+        const streaks = writeWheel(currentUser.streaks, record);
+        setUsers((current) => current.map((user) => (user.id === currentUser.id ? { ...user, streaks } : user)));
+        void saveUserProgress(currentUser.id, currentUser.xp, streaks).catch((error: unknown) => {
+          showToast(error instanceof Error ? error.message : "Could not save the spin", "error", "alert");
+        });
+        if (recoveredFt > 0) showToast(`You got back ${recoveredFt} Ft`);
+        else showToast("No Ft back this time. Try again in 7 days.");
+        return record;
+      },
       commitmentOn,
       pokeNotice,
       toast,
@@ -615,7 +686,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, outgoing, users, completedCounts, activityCounts, dailyTasks, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, commitmentOn, pokeNotice, toast]);
+  }, [items, friends, requests, outgoing, users, completedCounts, activityCounts, dailyTasks, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, yesterdayLostFt, wheelThisWeek, nextWheelDate, wheelDaysLeft, commitmentOn, pokeNotice, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }

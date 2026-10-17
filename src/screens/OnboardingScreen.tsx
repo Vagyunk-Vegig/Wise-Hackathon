@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { icons } from "../components/Icons";
 import { SnapSlider } from "../components/SnapSlider";
@@ -222,15 +222,88 @@ export function OnboardingScreen() {
 }
 
 function Welcome() {
+  const strike = useRef(new Animated.Value(0)).current;
+  const leave = useRef(new Animated.Value(0)).current;
+  const measured = useRef(0);
+  const [toWidth, setToWidth] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!toWidth) return;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (cancelled) return;
+      if (enabled) {
+        setDone(true);
+        return;
+      }
+      Animated.sequence([
+        Animated.delay(750),
+        Animated.timing(strike, { toValue: 1, duration: 400, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+        Animated.delay(200),
+        Animated.timing(leave, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+      ]).start(({ finished }) => {
+        if (finished && !cancelled) setDone(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [leave, strike, toWidth]);
+
   return (
     <View style={styles.welcome}>
-      <Text style={styles.mark}>
-        habit<Text style={styles.period}>.</Text>
+      <Text style={[styles.mark, styles.measure]} onLayout={(event) => {
+        const width = Math.ceil(event.nativeEvent.layout.width);
+        if (measured.current || width <= 0) return;
+        measured.current = width;
+        setToWidth(width);
+      }}>
+        To
       </Text>
+      <View style={styles.markRow}>
+        {done ? (
+          <Text style={styles.mark}>
+            Morrow<Text style={styles.period}>.</Text>
+          </Text>
+        ) : (
+          <>
+            <Animated.View
+              style={[
+                styles.toClip,
+                toWidth
+                  ? {
+                      maxWidth: leave.interpolate({ inputRange: [0, 1], outputRange: [toWidth, 0.01] }),
+                      opacity: leave.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }),
+                    }
+                  : null,
+              ]}
+            >
+              <View style={[styles.toInner, { width: toWidth || undefined }]}>
+                <Text style={styles.mark} numberOfLines={1}>
+                  To
+                </Text>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.strike,
+                    {
+                      transform: [{ scaleX: strike }],
+                    },
+                  ]}
+                />
+              </View>
+            </Animated.View>
+            <Text style={styles.mark} numberOfLines={1}>
+              Morrow<Text style={styles.period}>.</Text>
+            </Text>
+          </>
+        )}
+      </View>
       <Text style={styles.headline}>An open habit is money still at risk.</Text>
       <View style={styles.dashes}>
         <View style={[styles.dash, styles.dashOn]} />
-        <View style={[styles.dash, styles.dashOn]} />
+        <View style={styles.dash} />
         <View style={styles.dash} />
       </View>
     </View>
@@ -461,7 +534,21 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingTop: 12, paddingBottom: 8 },
   welcomeWrap: { flex: 1, justifyContent: "flex-end", paddingBottom: 28 },
   welcome: { gap: 20 },
-  mark: { color: colors.text, fontSize: 80, fontWeight: "700", letterSpacing: -2, lineHeight: 84 },
+  measure: { position: "absolute", opacity: 0, pointerEvents: "none" },
+  markRow: { flexDirection: "row", alignItems: "center", height: 78 },
+  toClip: { overflow: "hidden" },
+  toInner: { position: "relative", overflow: "hidden" },
+  mark: { color: colors.text, fontSize: 72, fontWeight: "700", letterSpacing: -2, lineHeight: 78 },
+  strike: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.accent,
+    transformOrigin: "left center",
+  },
   period: { color: colors.accent },
   headline: { color: colors.text, fontSize: 34, fontWeight: "700", letterSpacing: -0.6, lineHeight: 40 },
   dashes: { flexDirection: "row", gap: 6, marginTop: 8 },
