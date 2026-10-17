@@ -120,6 +120,7 @@ type Store = {
   showToast: (text: string, tone?: ToastMessage["tone"], icon?: ToastMessage["icon"]) => void;
   dismissToast: () => void;
   dismissPokeNotice: () => void;
+  refreshBoard: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -159,6 +160,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const rows = useRef(new Map<string, TaskRow>());
+  const reload = useRef<() => Promise<void>>(async () => undefined);
   const friendshipRows = useRef<FriendshipRow[]>([]);
   const sending = useRef(new Set<string>());
 
@@ -295,6 +297,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAuthReady(true);
       }
     };
+    reload.current = () => load();
     load().catch((error: unknown) => {
       if (!cancelled) {
         setOnboardingReady(true);
@@ -345,6 +348,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       showToast,
       dismissToast: () => setToast(null),
       dismissPokeNotice: () => setPokeNotice(null),
+      refreshBoard: () => reload.current(),
       setCommitment,
       completeItem: (id, date) => {
         const row = rows.current.get(id);

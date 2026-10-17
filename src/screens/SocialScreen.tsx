@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from "react-native";
 import { icons } from "../components/Icons";
 import { AvatarMark, Screen, SectionLabel, TopBar } from "../components/ui";
 import { toPerson } from "../db";
@@ -11,8 +11,81 @@ import type { Person } from "../types";
 
 export function SocialScreen() {
   const root = useRootNav();
-  const { requests, friends, outgoing, users, currentUser, streak, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke } = useStore();
+  const { requests, friends, outgoing, users, currentUser, streak, dailyTasks, pokeNotice, dismissPokeNotice, acceptRequest, sendRequest, poke, refreshBoard, showToast } = useStore();
   const [query, setQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const refreshingRef = useRef(false);
+  const refresh = async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      await refreshBoard();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not refresh", "error", "alert");
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  };
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const node = scrollRef.current?.getScrollableNode() as unknown as HTMLElement | undefined;
+    if (!node) return;
+    let start = 0;
+    let tracking = false;
+    let wheel = 0;
+    let wheelTimer = 0;
+    const begin = (y: number) => {
+      if (node.scrollTop > 2) return;
+      start = y;
+      tracking = true;
+    };
+    const finish = (y: number) => {
+      if (!tracking) return;
+      tracking = false;
+      if (node.scrollTop <= 2 && y - start > 72) void refreshRef.current();
+    };
+    const onTouchStart = (event: TouchEvent) => begin(event.touches[0]?.clientY ?? 0);
+    const onTouchEnd = (event: TouchEvent) => finish(event.changedTouches[0]?.clientY ?? 0);
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") begin(event.clientY);
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") finish(event.clientY);
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (node.scrollTop > 2 || event.deltaY >= 0) {
+        wheel = 0;
+        return;
+      }
+      wheel += -event.deltaY;
+      window.clearTimeout(wheelTimer);
+      wheelTimer = window.setTimeout(() => {
+        wheel = 0;
+      }, 180);
+      if (wheel > 80) {
+        wheel = 0;
+        void refreshRef.current();
+      }
+    };
+    node.addEventListener("touchstart", onTouchStart, { passive: true });
+    node.addEventListener("touchend", onTouchEnd);
+    node.addEventListener("pointerdown", onPointerDown);
+    node.addEventListener("pointerup", onPointerUp);
+    node.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      node.removeEventListener("touchstart", onTouchStart);
+      node.removeEventListener("touchend", onTouchEnd);
+      node.removeEventListener("pointerdown", onPointerDown);
+      node.removeEventListener("pointerup", onPointerUp);
+      node.removeEventListener("wheel", onWheel);
+      window.clearTimeout(wheelTimer);
+    };
+  }, []);
   const matches = useMemo(() => searchByUsername(users, query, currentUser?.id).map(toPerson), [users, query, currentUser?.id]);
   const searching = query.trim().length > 0;
 
@@ -26,7 +99,13 @@ export function SocialScreen() {
   return (
     <Screen>
       <TopBar streak={streak} onAvatar={() => root.navigate("Profile")} onSettings={() => root.navigate("Settings")} />
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.accent} colors={[colors.accent]} />}
+      >
         <View>
           <Text style={styles.title}>Social</Text>
           <Text style={styles.sub}>Friends and pokes</Text>
@@ -38,7 +117,6 @@ export function SocialScreen() {
           </Pressable>
         ) : null}
         <View style={styles.search}>
-          <icons.Search size={17} color={colors.muted} />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -46,9 +124,13 @@ export function SocialScreen() {
             autoCorrect={false}
             placeholder="Search by username"
             placeholderTextColor={colors.muted}
-            style={styles.input}
+            style={[styles.input, Platform.OS === "web" ? { outlineWidth: 0 } : null]}
           />
+          <View pointerEvents="none" style={styles.searchIcon}>
+            <icons.Search size={17} color={colors.muted} />
+          </View>
         </View>
+        {refreshing ? <Text style={styles.meta}>Refreshing…</Text> : null}
         {searching ? (
           <View style={{ gap: 8 }}>
             <SectionLabel title="PEOPLE" />
@@ -112,13 +194,15 @@ function PersonRow({ person, action, disabled, onPress }: { person: Person; acti
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   body: { padding: 16, paddingTop: 24, gap: 24 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   sub: { color: colors.secondary, fontSize: 12, marginTop: 4 },
   notice: { borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   noticeText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" },
-  search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
-  input: { flex: 1, color: colors.text, fontSize: 13 },
+  search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: "center", overflow: "hidden" },
+  searchIcon: { position: "absolute", left: 14, top: 0, bottom: 0, justifyContent: "center" },
+  input: { height: "100%", width: "100%", margin: 0, paddingVertical: 0, paddingLeft: 40, paddingRight: 14, color: colors.text, fontSize: 14, backgroundColor: "transparent", borderWidth: 0 },
   row: { height: 72, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12 },
   person: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center" },
