@@ -2,9 +2,9 @@
 
 Badges live at the bottom of Profile, under Activity. There is no separate Badges page.
 
-A badge is earned once and kept if a streak breaks. The reward is a one-time XP bonus, shown in a toast as `7 Day Streak · +20 XP`. Bonus XP counts toward level, and each bonus is under 500 XP, so it cannot skip a level badge. Earned ids are stored on `user.badges`.
+A badge is earned once and kept if a streak breaks. The reward is a one-time XP bonus, shown in a toast as `7 Day Streak · +20 XP`. Bonus XP counts toward level. Each bonus is smaller than the XP one level asks for, so it cannot skip a level badge. Earned ids are stored on `user.badges`.
 
-Level is `floor(xp / 500) + 1`. A habit is 10 XP. A task is 20 XP. A deadline is 0 XP and does not count.
+Level 1 asks for 240 XP. Every next level asks for 40 XP more than the one before it. A habit is 10 XP. A task is 20 XP. A deadline is 0 XP and does not count.
 
 ## Streaks
 

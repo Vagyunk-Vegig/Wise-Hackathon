@@ -5,7 +5,7 @@ import { categoryMeta, icons, profileIcons, type ProfileIconName } from "./Icons
 import { colors, radius } from "../theme";
 import type { Item } from "../types";
 import { dueChip } from "../dates";
-import { XP_PER_LEVEL } from "../sample";
+import { levelProgress } from "../sample";
 import { useStore } from "../store";
 
 export function Screen({ children }: { children: ReactNode }) {
@@ -43,7 +43,7 @@ export function TopBar({
 }) {
   const { currentUser, totalXp } = useStore();
   const initials = currentUser?.initials ?? "··";
-  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+  const level = levelProgress(totalXp).level;
   return (
     <View style={styles.topBar}>
       <Pressable onPress={onAvatar} style={styles.avatarWrap}>

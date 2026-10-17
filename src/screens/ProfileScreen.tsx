@@ -6,7 +6,7 @@ import { BadgeCollection } from "../components/BadgeCollection";
 import { icons } from "../components/Icons";
 import { AvatarMark, IconButton, PageHeader, Screen } from "../components/ui";
 import { colors } from "../theme";
-import { XP_PER_LEVEL } from "../sample";
+import { levelProgress } from "../sample";
 import { useStore } from "../store";
 import type { RootStackParamList } from "../routes";
 
@@ -19,8 +19,9 @@ export function ProfileScreen() {
   const profile = viewingSelf ? currentUser : users.find((user) => user.id === requestedId) ?? null;
   const xp = profile?.xp ?? 0;
   const streak = profile?.streak ?? 0;
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
-  const into = xp % XP_PER_LEVEL;
+  const progress = levelProgress(xp);
+  const level = progress.level;
+  const into = progress.into;
   const completed = viewingSelf
     ? items.reduce((count, item) => count + (item.kind === "habit" ? item.doneDates.length : item.done ? 1 : 0), 0)
     : completedCounts[profile?.id ?? ""] ?? 0;
@@ -48,8 +49,8 @@ export function ProfileScreen() {
         <View style={{ gap: 10, alignItems: "center" }}>
           <Text style={styles.level}>Level {level}</Text>
           <View style={styles.pill}>
-            <View style={[styles.pillFill, { width: `${Math.max(22, Math.round((into / XP_PER_LEVEL) * 100))}%` }]}>
-              <Text style={styles.pillText}>{into}/{XP_PER_LEVEL}</Text>
+            <View style={[styles.pillFill, { width: `${Math.max(22, Math.round((into / progress.need) * 100))}%` }]}>
+              <Text style={styles.pillText}>{into}/{progress.need}</Text>
             </View>
           </View>
           <View style={styles.stats}>

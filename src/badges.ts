@@ -1,7 +1,7 @@
 import { TODAY, shiftDate } from "./dates";
 import { readStreak } from "./db";
 import { itemsForDate } from "./schedule";
-import { XP_PER_LEVEL } from "./sample";
+import { levelProgress } from "./sample";
 import { colors } from "./theme";
 import type { Item } from "./types";
 
@@ -210,7 +210,7 @@ export function badgeStats(input: { xp: number; streak: number; streaks: unknown
     streak: input.streak,
     longest: Math.max(numberField(input.streaks, "longest"), input.streak),
     xp,
-    level: Math.floor(xp / XP_PER_LEVEL) + 1,
+    level: levelProgress(xp).level,
     completed: live ? taskCompletions(live) : input.completed,
     mornings: mornings.length,
     perfect: live ? perfectDates(live).length : stringList(input.streaks, "perfectDays").length,

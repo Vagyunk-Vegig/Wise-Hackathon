@@ -3,7 +3,7 @@ import { Linking } from "react-native";
 import { badgeRewardText, settleBadges } from "./badges";
 import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, readStreak, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
-import { XP_PER_LEVEL } from "./sample";
+import { levelProgress } from "./sample";
 import { supabase } from "./supabase";
 import { Category, type Item, type Person, type ToastMessage } from "./types";
 
@@ -386,7 +386,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (item.kind !== "habit" && item.done) return;
         const baseXp = currentUser?.xp ?? 0;
         const nextXp = baseXp + item.xp;
-        const previousLevel = Math.floor(baseXp / XP_PER_LEVEL) + 1;
+        const previousLevel = levelProgress(baseXp).level;
         const streakUpdate = bumpStreak(currentUser?.streaks, date);
         const nextItems = items.map((entry) => {
           if (entry.id !== id) return entry;
@@ -400,7 +400,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? settleBadges({ xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value, badges: currentUser.badges, completed: 0, items: nextItems, claimMorning: true })
           : null;
         const savedXp = settled?.xp ?? nextXp;
-        const nextLevel = Math.floor(savedXp / XP_PER_LEVEL) + 1;
+        const nextLevel = levelProgress(savedXp).level;
         setItems(nextItems);
         if (currentUser && settled) {
           setUsers((current) =>

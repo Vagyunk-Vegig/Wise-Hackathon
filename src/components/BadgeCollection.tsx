@@ -34,7 +34,7 @@ import {
 } from "lucide-react-native";
 import { badgeCategories, badgeCollection, badgeStats, type BadgeCard, type BadgeIcon, type BadgeStats } from "../badges";
 import { icons } from "./Icons";
-import { XP_PER_LEVEL } from "../sample";
+import { levelProgress } from "../sample";
 import { colors } from "../theme";
 import type { Item } from "../types";
 
@@ -106,8 +106,9 @@ export function BadgeCollection({
   const [filter, setFilter] = useState<"all" | "earned" | "progress">("all");
   const stats: BadgeStats = badgeStats({ xp, streak, streaks, badges, completed, items });
   const collection = badgeCollection(stats, filter);
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
-  const into = xp % XP_PER_LEVEL;
+  const progress = levelProgress(xp);
+  const level = progress.level;
+  const into = progress.into;
   const percent = collection.total === 0 ? 0 : Math.round((collection.earned / collection.total) * 100);
   const filters = [
     { id: "all" as const, label: "All", count: collection.total },
@@ -138,7 +139,7 @@ export function BadgeCollection({
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.level}>Level {level}</Text>
-          <Text style={styles.meta}>{into}/{XP_PER_LEVEL} XP</Text>
+          <Text style={styles.meta}>{into}/{progress.need} XP</Text>
         </View>
         <View style={styles.summaryRow}>
           <View style={styles.inline}>
