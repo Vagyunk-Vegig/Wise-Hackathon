@@ -5,7 +5,7 @@ import { icons } from "../components/Icons";
 import { SnapSlider } from "../components/SnapSlider";
 import { Screen } from "../components/ui";
 import { useStore } from "../store";
-import { colors, radius } from "../theme";
+import { colors, inputReset, radius } from "../theme";
 
 type Step = "welcome" | "create" | "signin" | "intro" | "habits" | "penalty" | "reminder" | "ready";
 
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   field: { gap: 8 },
   label: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
   inputRow: { height: 50, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 8 },
-  input: { flex: 1, color: colors.text, fontSize: 16 },
+  input: { flex: 1, color: colors.text, fontSize: 16, ...inputReset },
   tracks: { flexDirection: "row", gap: 6 },
   track: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
   trackOn: { backgroundColor: colors.accent },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   presetTime: { color: colors.text, fontSize: 12, fontWeight: "700" },
   presetLabelOn: { color: colors.onAccent },
   habitHead: { flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
-  habitInput: { height: 50, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 16 },
+  habitInput: { height: 50, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 16, ...inputReset },
   reminderCard: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, padding: 16 },
   bell: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center" },
   time: { color: colors.text, fontSize: 40, fontWeight: "700" },

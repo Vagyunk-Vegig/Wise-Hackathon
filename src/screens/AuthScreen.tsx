@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ElementRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { PrimaryButton, Screen, SecondaryButton } from "../components/ui";
-import { colors, radius } from "../theme";
+import { colors, inputReset, radius } from "../theme";
 import { useStore } from "../store";
 
 export function AuthScreen() {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   mark: { color: colors.accent, fontSize: 14, fontWeight: "800" },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
   sub: { color: colors.secondary, fontSize: 13, lineHeight: 20 },
-  input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14 },
+  input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14, ...inputReset },
   error: { color: colors.streak, fontSize: 13, lineHeight: 18 },
   google: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   googleMark: { color: colors.accent, fontSize: 16, fontWeight: "800" },

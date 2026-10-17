@@ -43,3 +43,8 @@ export const radius = {
   input: 12,
   pill: 999,
 };
+
+export const inputReset = {
+  outlineWidth: 0,
+  outlineStyle: "none" as const,
+};

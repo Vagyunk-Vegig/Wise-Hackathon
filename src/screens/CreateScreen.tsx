@@ -7,7 +7,7 @@ import { categoryMeta, icons } from "../components/Icons";
 import { TomorrowBanner, tomorrowQuotaFilled } from "../components/TomorrowBanner";
 import { IconButton, PageHeader, PrimaryButton, Screen } from "../components/ui";
 import { TODAY, isoDate, longDate, monthGrid, parts, shiftDate, shortDate } from "../dates";
-import { colors, radius } from "../theme";
+import { colors, inputReset, radius } from "../theme";
 import { useStore } from "../store";
 import { Category, type ItemKind } from "../types";
 import type { RootStackParamList } from "../routes";
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   typeLabel: { color: colors.text, fontSize: 13, fontWeight: "700", textAlign: "center" },
   typeHint: { color: colors.muted, fontSize: 11 },
   label: { color: colors.secondary, fontSize: 12, fontWeight: "600" },
-  input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14 },
+  input: { height: 48, borderRadius: radius.input, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, color: colors.text, fontSize: 14, ...inputReset },
   inputError: { borderColor: colors.streak },
   dateInput: { flexDirection: "row", alignItems: "center" },
   dateOpen: { borderColor: colors.accent },

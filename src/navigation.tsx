@@ -14,6 +14,7 @@ import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { PlanScreen } from "./screens/PlanScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { AccountScreen } from "./screens/AccountScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { SocialScreen } from "./screens/SocialScreen";
 import { TodayScreen } from "./screens/TodayScreen";
@@ -126,6 +127,7 @@ export function AppNavigation() {
         <Root.Screen name="Create" component={CreateScreen} />
         <Root.Screen name="Profile" component={ProfileScreen} />
         <Root.Screen name="Settings" component={SettingsScreen} />
+        <Root.Screen name="Account" component={AccountScreen} />
         <Root.Screen name="Commitment" component={CommitmentScreen} />
         <Root.Screen name="Notifications" component={NotificationsScreen} />
       </Root.Navigator>

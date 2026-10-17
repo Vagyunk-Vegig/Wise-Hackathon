@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Create: { date?: string; kind?: ItemKind } | undefined;
   Profile: { userId?: string } | undefined;
   Settings: undefined;
+  Account: undefined;
   Commitment: undefined;
   Notifications: undefined;
 };

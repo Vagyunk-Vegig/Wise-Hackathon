@@ -4,7 +4,7 @@ import { icons } from "../components/Icons";
 import { AvatarMark, Screen, SectionLabel, TopBar } from "../components/ui";
 import { toPerson } from "../db";
 import { searchByUsername } from "../search";
-import { colors } from "../theme";
+import { colors, inputReset } from "../theme";
 import { useRootNav } from "../routes";
 import { useStore } from "../store";
 import type { Person } from "../types";
@@ -124,7 +124,7 @@ export function SocialScreen() {
             autoCorrect={false}
             placeholder="Search by username"
             placeholderTextColor={colors.muted}
-            style={[styles.input, Platform.OS === "web" ? { outlineWidth: 0 } : null]}
+            style={styles.input}
           />
           <View pointerEvents="none" style={styles.searchIcon}>
             <icons.Search size={17} color={colors.muted} />
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   noticeText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "700" },
   search: { height: 48, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: "center", overflow: "hidden" },
   searchIcon: { position: "absolute", left: 14, top: 0, bottom: 0, justifyContent: "center" },
-  input: { height: "100%", width: "100%", margin: 0, paddingVertical: 0, paddingLeft: 40, paddingRight: 14, color: colors.text, fontSize: 14, backgroundColor: "transparent", borderWidth: 0 },
+  input: { height: "100%", width: "100%", margin: 0, paddingVertical: 0, paddingLeft: 40, paddingRight: 14, color: colors.text, fontSize: 14, backgroundColor: "transparent", borderWidth: 0, ...inputReset },
   row: { height: 72, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12 },
   person: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.elevated, alignItems: "center", justifyContent: "center" },
