@@ -48,6 +48,31 @@ export function dueChip(iso: string) {
   return `${days} days left`;
 }
 
+export function contributionWeeks(endIso: string, weekCount = 53) {
+  const { year, month, day } = parts(endIso);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const last = shiftDate(endIso, 6 - weekday);
+  const first = shiftDate(last, -(weekCount * 7 - 1));
+  const weeks: string[][] = [];
+  for (let week = 0; week < weekCount; week += 1) {
+    const column: string[] = [];
+    for (let offset = 0; offset < 7; offset += 1) column.push(shiftDate(first, week * 7 + offset));
+    weeks.push(column);
+  }
+  return weeks;
+}
+
+export function contributionMonthLabels(weeks: string[][]) {
+  const labels = weeks.map(() => "");
+  weeks.forEach((week, index) => {
+    const first = week.find((iso) => parts(iso).day === 1);
+    if (!first) return;
+    const target = parts(first).weekday === "Sat" && index + 1 < weeks.length ? index + 1 : index;
+    labels[target] = MONTHS[parts(first).month - 1];
+  });
+  return labels;
+}
+
 export function monthGrid(year: number, month: number) {
   const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const count = new Date(Date.UTC(year, month, 0)).getUTCDate();

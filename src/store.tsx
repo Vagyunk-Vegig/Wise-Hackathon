@@ -103,6 +103,7 @@ type Store = {
   outgoing: string[];
   users: AppUser[];
   completedCounts: Record<string, number>;
+  activityCounts: Record<string, Record<string, number>>;
   dailyTasks: Record<string, { done: number; total: number }>;
   currentUser: AppUser | null;
   signedIn: boolean;
@@ -144,6 +145,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [completedCounts, setCompletedCounts] = useState<Record<string, number>>({});
+  const [activityCounts, setActivityCounts] = useState<Record<string, Record<string, number>>>({});
   const [dailyTasks, setDailyTasks] = useState<Record<string, { done: number; total: number }>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
@@ -216,6 +218,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!sessionId) {
         if (!cancelled) {
           setCompletedCounts({});
+          setActivityCounts({});
           setDailyTasks({});
           publish([], [], null);
           setPenaltyFt(800);
@@ -256,9 +259,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const visibleUsers = board.users.filter((user) => user.id !== PROBE_USER && user.username !== "probe");
       const ownTasks = board.tasks.filter((task) => task.user_id === sessionId);
       const counts: Record<string, number> = {};
+      const activity: Record<string, Record<string, number>> = {};
       const daily: Record<string, { done: number; total: number }> = {};
       for (const task of board.tasks) {
         const item = rowToItem(task);
+        const days = item.kind === "habit" ? item.doneDates : item.done ? [item.date] : [];
+        for (const day of days) {
+          const userDays = activity[task.user_id] ?? {};
+          userDays[day] = (userDays[day] ?? 0) + 1;
+          activity[task.user_id] = userDays;
+        }
         if (item.done) counts[task.user_id] = (counts[task.user_id] ?? 0) + 1;
         if (item.date !== TODAY || item.kind === "deadline") continue;
         const current = daily[task.user_id] ?? { done: 0, total: 0 };
@@ -293,6 +303,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setOnboardingComplete(Boolean(saved?.complete));
         setOnboardingReady(true);
         setCompletedCounts(counts);
+        setActivityCounts(activity);
         setDailyTasks(daily);
         publish(boardUsers, ownTasks, sessionId, friendships);
         setSignedIn(true);
@@ -333,6 +344,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       outgoing,
       users,
       completedCounts,
+      activityCounts,
       dailyTasks,
       currentUser,
       signedIn,
@@ -379,6 +391,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             current.map((user) => (user.id === currentUser.id ? { ...user, xp: nextXp, streak: streakUpdate.count, streaks: streakUpdate.value } : user)),
           );
           setCompletedCounts((current) => ({ ...current, [currentUser.id]: (current[currentUser.id] ?? 0) + 1 }));
+          setActivityCounts((current) => {
+            const previous = current[currentUser.id] ?? {};
+            return { ...current, [currentUser.id]: { ...previous, [date]: (previous[date] ?? 0) + 1 } };
+          });
           if (item.date === TODAY) {
             setDailyTasks((current) => {
               const previous = current[currentUser.id] ?? { done: 0, total: 0 };
@@ -498,6 +514,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signOut();
         if (error) throw new Error(error.message);
         setCompletedCounts({});
+        setActivityCounts({});
         setDailyTasks({});
         setPokeNotice(null);
         publish([], [], null);
@@ -590,6 +607,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signOut();
         if (error) throw new Error(error.message);
         setCompletedCounts({});
+        setActivityCounts({});
         setDailyTasks({});
         setPokeNotice(null);
         publish([], [], null);
@@ -597,7 +615,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, outgoing, users, completedCounts, dailyTasks, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, commitmentOn, pokeNotice, toast]);
+  }, [items, friends, requests, outgoing, users, completedCounts, activityCounts, dailyTasks, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, commitmentOn, pokeNotice, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }
