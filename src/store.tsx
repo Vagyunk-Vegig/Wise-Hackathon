@@ -1,12 +1,53 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Linking } from "react-native";
 import { acceptFriendship, bumpStreak, deleteAccount, ensureUser, fetchBoard, fetchFriendships, initialsFor, insertFriendship, insertTask, rowToItem, saveTaskDone, saveUserProgress, updateUserIcon, updateUsername, toPerson, type AppUser, type FriendshipRow } from "./db";
 import { TODAY } from "./dates";
 import { XP_PER_LEVEL } from "./sample";
 import { supabase } from "./supabase";
-import type { Item, Person, ToastMessage } from "./types";
+import { Category, type Item, type Person, type ToastMessage } from "./types";
 
 const PROBE_USER = "00000000-0000-0000-0000-000000000099";
+
+function webRedirectOrigin() {
+  if (typeof window === "undefined" || !window.location) return undefined;
+  const origin = window.location.origin;
+  return typeof origin === "string" && origin.length > 0 ? origin : undefined;
+}
 let signupName: string | null = null;
+
+type SavedOnboarding = { complete: true; penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string };
+const onboardingMemory = new Map<string, string>();
+
+function onboardingKey(userId: string) {
+  return `habit.onboarding.${userId}`;
+}
+
+function readOnboarding(userId: string): SavedOnboarding | null {
+  const raw = typeof localStorage !== "undefined" ? localStorage.getItem(onboardingKey(userId)) : (onboardingMemory.get(onboardingKey(userId)) ?? null);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<SavedOnboarding>;
+    if (!parsed.complete || !Array.isArray(parsed.habits)) return null;
+    const dailyCount = typeof parsed.dailyCount === "number" && parsed.dailyCount >= 0 && parsed.dailyCount <= 6 ? parsed.dailyCount : 3;
+    const nudgeTime = typeof parsed.nudgeTime === "string" && /^\d{2}:\d{2}$/.test(parsed.nudgeTime) ? parsed.nudgeTime : "17:00";
+    return { complete: true, penaltyFt: parsed.penaltyFt ?? 800, habits: parsed.habits, reminders: Boolean(parsed.reminders), dailyCount, nudgeTime };
+  } catch {
+    return null;
+  }
+}
+
+function writeOnboarding(userId: string, value: SavedOnboarding) {
+  const raw = JSON.stringify(value);
+  if (typeof localStorage !== "undefined") localStorage.setItem(onboardingKey(userId), raw);
+  else onboardingMemory.set(onboardingKey(userId), raw);
+}
+
+function categoryForHabit(title: string) {
+  const key = title.toLowerCase();
+  if (key.includes("water")) return Category.Hygiene;
+  if (key.includes("workout") || key.includes("run")) return Category.Fitness;
+  return Category.Personal;
+}
 
 const POKE_LIMIT = 5;
 
@@ -85,6 +126,15 @@ type Store = {
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  penaltyFt: number;
+  fixedHabits: string[];
+  remindersOn: boolean;
+  dailyCount: number;
+  nudgeTime: string;
+  onboardingComplete: boolean;
+  onboardingReady: boolean;
+  finishOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
+  updateOnboarding: (input: { penaltyFt: number; habits: string[]; reminders: boolean; dailyCount: number; nudgeTime: string }) => Promise<void>;
 };
 
 const StoreContext = createContext<Store | null>(null);
@@ -103,6 +153,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [commitmentOn, setCommitment] = useState(false);
   const [pokeNotice, setPokeNotice] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [penaltyFt, setPenaltyFt] = useState(800);
+  const [fixedHabits, setFixedHabits] = useState<string[]>([]);
+  const [remindersOn, setRemindersOn] = useState(false);
+  const [dailyCount, setDailyCount] = useState(3);
+  const [nudgeTime, setNudgeTime] = useState("17:00");
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [onboardingReady, setOnboardingReady] = useState(false);
   const rows = useRef(new Map<string, TaskRow>());
   const friendshipRows = useRef<FriendshipRow[]>([]);
   const sending = useRef(new Set<string>());
@@ -159,6 +216,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setCompletedCounts({});
           setDailyTasks({});
           publish([], [], null);
+          setPenaltyFt(800);
+          setFixedHabits([]);
+          setRemindersOn(false);
+          setDailyCount(3);
+          setNudgeTime("17:00");
+          setOnboardingComplete(false);
+          setOnboardingReady(true);
           setSignedIn(false);
           setAuthReady(true);
         }
@@ -217,6 +281,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       const boardUsers = visibleUsers.map((user) => (user.id === profile.id ? profile : user));
       if (!cancelled) {
+        const remote = data.session?.user.user_metadata?.onboarding as SavedOnboarding | undefined;
+        const saved = readOnboarding(sessionId) ?? (remote?.complete && Array.isArray(remote.habits) ? remote : null);
+        setPenaltyFt(saved?.penaltyFt ?? 800);
+        setFixedHabits(saved?.habits ?? []);
+        setRemindersOn(saved?.reminders ?? false);
+        setDailyCount(saved?.dailyCount ?? 3);
+        setNudgeTime(saved?.nudgeTime ?? "17:00");
+        setOnboardingComplete(Boolean(saved?.complete));
+        setOnboardingReady(true);
         setCompletedCounts(counts);
         setDailyTasks(daily);
         publish(boardUsers, ownTasks, sessionId, friendships);
@@ -226,6 +299,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     load().catch((error: unknown) => {
       if (!cancelled) {
+        setOnboardingReady(true);
         setSignedIn(false);
         setAuthReady(true);
         showToast(error instanceof Error ? error.message : "Could not load Supabase", "error", "alert");
@@ -260,6 +334,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       currentUser,
       signedIn,
       authReady,
+      penaltyFt,
+      fixedHabits,
+      remindersOn,
+      dailyCount,
+      nudgeTime,
+      onboardingComplete,
+      onboardingReady,
       commitmentOn,
       pokeNotice,
       toast,
@@ -424,13 +505,69 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (error) throw new Error(error.message);
         showToast("Signed in");
       },
+      finishOnboarding: async ({ penaltyFt: amount, habits, reminders, dailyCount: count, nudgeTime: time }) => {
+        if (!currentUser) throw new Error("Sign in first.");
+        const titles = habits.map((habit) => habit.trim()).filter(Boolean);
+        for (const title of titles) {
+          if (items.some((item) => item.date === TODAY && item.title === title)) continue;
+          const row = await insertTask({
+            userId: currentUser.id,
+            title,
+            kind: "goal",
+            category: categoryForHabit(title),
+            date: TODAY,
+            note: "",
+          });
+          rows.current.set(String(row.id), row);
+          setItems((current) => [rowToItem(row), ...current]);
+        }
+        const saved = { complete: true as const, penaltyFt: amount, habits: titles, reminders, dailyCount: count, nudgeTime: time };
+        writeOnboarding(currentUser.id, saved);
+        await supabase.auth.updateUser({ data: { onboarding: saved } }).catch(() => undefined);
+        setPenaltyFt(amount);
+        setFixedHabits(titles);
+        setRemindersOn(reminders);
+        setDailyCount(count);
+        setNudgeTime(time);
+        setOnboardingComplete(true);
+      },
+      updateOnboarding: async ({ penaltyFt: amount, habits, reminders, dailyCount: count, nudgeTime: time }) => {
+        if (!currentUser) throw new Error("Sign in first.");
+        const titles = habits.map((habit) => habit.trim()).filter(Boolean);
+        for (const title of titles) {
+          if (items.some((item) => item.date === TODAY && item.title === title)) continue;
+          const row = await insertTask({
+            userId: currentUser.id,
+            title,
+            kind: "goal",
+            category: categoryForHabit(title),
+            date: TODAY,
+            note: "",
+          });
+          rows.current.set(String(row.id), row);
+          setItems((current) => [rowToItem(row), ...current]);
+        }
+        const saved = { complete: true as const, penaltyFt: amount, habits: titles, reminders, dailyCount: count, nudgeTime: time };
+        writeOnboarding(currentUser.id, saved);
+        await supabase.auth.updateUser({ data: { onboarding: saved } }).catch(() => undefined);
+        setPenaltyFt(amount);
+        setFixedHabits(titles);
+        setRemindersOn(reminders);
+        setDailyCount(count);
+        setNudgeTime(time);
+        setOnboardingComplete(true);
+      },
       signInWithGoogle: async () => {
-        const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
-        const { error } = await supabase.auth.signInWithOAuth({
+        const redirectTo = webRedirectOrigin();
+        const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo },
+          options: { redirectTo, skipBrowserRedirect: redirectTo == null },
         });
         if (error) throw new Error(error.message);
+        if (redirectTo == null) {
+          if (!data?.url) throw new Error("Could not start Google sign-in");
+          await Linking.openURL(data.url);
+        }
       },
       signUp: async (email, password, username) => {
         signupName = username;
@@ -456,7 +593,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         showToast("Signed out");
       },
     };
-  }, [items, friends, requests, outgoing, users, completedCounts, dailyTasks, currentUser, signedIn, authReady, commitmentOn, pokeNotice, toast]);
+  }, [items, friends, requests, outgoing, users, completedCounts, dailyTasks, currentUser, signedIn, authReady, penaltyFt, fixedHabits, remindersOn, dailyCount, nudgeTime, onboardingComplete, onboardingReady, commitmentOn, pokeNotice, toast]);
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }

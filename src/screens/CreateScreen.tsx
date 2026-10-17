@@ -4,8 +4,9 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { categoryMeta, icons } from "../components/Icons";
+import { TomorrowBanner } from "../components/TomorrowBanner";
 import { IconButton, PageHeader, PrimaryButton, Screen } from "../components/ui";
-import { TODAY, isoDate, longDate, monthGrid, parts } from "../dates";
+import { TODAY, isoDate, longDate, monthGrid, parts, shiftDate, shortDate } from "../dates";
 import { colors, radius } from "../theme";
 import { useStore } from "../store";
 import { Category, type ItemKind } from "../types";
@@ -55,7 +56,7 @@ export function CreateScreen() {
         date,
         description: description.trim(),
       });
-      showToast(kind === "deadline" ? "Deadline saved" : "Saved");
+      showToast(savedLabel(kind, date));
       navigation.goBack();
     } catch (error) {
       setSaving(false);
@@ -70,6 +71,13 @@ export function CreateScreen() {
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 20 }}>
           <PageHeader title="Create" onBack={() => navigation.goBack()} />
+          <TomorrowBanner
+            pendingDate={date}
+            onPress={() => {
+              setDate(shiftDate(TODAY, 1));
+              setKind("goal");
+            }}
+          />
           <View style={styles.types}>
             {kinds.map((choice) => {
               const on = choice.kind === kind;
@@ -161,6 +169,13 @@ export function CreateScreen() {
       ) : null}
     </Screen>
   );
+}
+
+function savedLabel(kind: ItemKind, date: string) {
+  const name = kind === "deadline" ? "Deadline" : kind === "habit" ? "Habit" : "Task";
+  if (date === TODAY) return `${name} saved for today`;
+  if (date === shiftDate(TODAY, 1)) return `${name} saved for tomorrow`;
+  return `${name} saved for ${shortDate(date)}`;
 }
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];

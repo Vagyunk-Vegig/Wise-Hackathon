@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Profile: { userId?: string } | undefined;
   Settings: undefined;
   Commitment: undefined;
+  Notifications: undefined;
 };
 
 export type PlanStackParamList = {

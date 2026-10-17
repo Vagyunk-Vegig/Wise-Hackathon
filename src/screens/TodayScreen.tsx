@@ -1,8 +1,9 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { DayList } from "../components/DayList";
 import { icons } from "../components/Icons";
+import { TomorrowBanner } from "../components/TomorrowBanner";
 import { PrimaryButton, Screen, TopBar } from "../components/ui";
-import { TODAY } from "../dates";
+import { shiftDate, TODAY } from "../dates";
 import { itemsForDate } from "../schedule";
 import { colors } from "../theme";
 import { useRootNav } from "../routes";
@@ -16,9 +17,10 @@ export function TodayScreen() {
   return (
     <Screen>
       <TopBar streak={streak} onAvatar={() => navigation.navigate("Profile")} onSettings={() => navigation.navigate("Settings")} />
-      <ScrollView contentContainerStyle={today.length === 0 ? { flexGrow: 1 } : { paddingHorizontal: 16, paddingBottom: 24 }}>
+      <ScrollView contentContainerStyle={today.length === 0 ? { flexGrow: 1, paddingHorizontal: 16 } : { paddingHorizontal: 16, paddingBottom: 24, gap: 16 }}>
+        <TomorrowBanner onPress={() => navigation.navigate("Create", { date: shiftDate(TODAY, 1), kind: "goal" })} />
         {today.length === 0 ? (
-          <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          <View style={{ flex: 1 }}>
             <DayList
               date={TODAY}
               items={[]}
